@@ -707,24 +707,13 @@ class NormalModes(dobject):
 
     def get_vspring_and_fspring_B(self):
         """
-        Calculates spring forces and potential for bosons.
-        Evaluated using recursion relation from arXiv:1905.090.
+        Calculates spring forces and potential (with exchange effects from indistinguishability)
+        for the bosons present, if any.
         """
-
         if len(self.bosons) == 0:
-            pass
-        else:
-            (E_k_N, V) = Evaluate_VB(self)
+            return
 
-            P = self.nbeads
-
-            F = np.zeros((P, 3 * self.natoms), float)
-
-            for ind, l in enumerate(self.bosons):
-                for j in range(P):
-                    F[j, 3 * l : 3 * (l + 1)] = Evaluate_dVB(self, E_k_N, V, ind, j)
-
-            return [V[-1], F]
+        return ExchangePotential(self).get_vspring_and_fspring()
 
     def get_fspring(self):
         """
