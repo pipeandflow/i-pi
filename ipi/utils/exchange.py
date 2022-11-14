@@ -65,19 +65,7 @@ class ExchangePotential(dobject):
                 # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
                 r = q[j, 3 * l : 3 * (l + 1)]
 
-                # Taking care of boundary conditions.
-                # Usually r_l_jp1 is the next bead of same atom.
-                next_bead_ind = j + 1
-                next_atom_ind = 3 * l
-
-                if j == P - 1:
-                    # If on the last bead, r_l_jp1 is the first bead of next atom
-                    next_bead_ind = 0
-                    next_atom_ind = 3 * (l + 1)
-
-                    if l == N - 1:
-                        # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
-                        next_atom_ind = 3 * (N - k)
+                next_atom_ind, next_bead_ind = self.next_bead_k_ring(l, j, k, N)
 
                 r_next = q[next_bead_ind, next_atom_ind : (next_atom_ind + 3)]
                 diff = r_next - r
@@ -86,6 +74,27 @@ class ExchangePotential(dobject):
 
         return 0.5 * m * omegaP_sq * sumE
 
+    def next_bead_k_ring(self, atom_index, bead_index, k, N):
+        """
+        The next atom and bead indices in a ring polymer of k beads over particles R_{N-k+1},...,R_N.
+        """
+        P = self.nbeads
+        l = atom_index
+        j = bead_index
+
+        # Taking care of boundary conditions.
+        # Usually r_l_jp1 is the next bead of same atom.
+        next_bead_ind = j + 1
+        next_atom_ind = l
+        if j == P - 1:
+            # If on the last bead, r_l_jp1 is the first bead of next atom
+            next_bead_ind = 0
+            next_atom_ind = 3 * (l + 1)
+
+            if l == N - 1:
+                # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
+                next_atom_ind = 3 * (N - k)
+        return next_atom_ind, next_bead_ind
 
     def Evaluate_dEkn_on_atom(self, l, j, N, k):
         """
