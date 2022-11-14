@@ -67,7 +67,7 @@ class ExchangePotential(dobject):
 
                 next_atom_ind, next_bead_ind = self.next_bead_k_ring(l, j, k, N)
 
-                r_next = q[next_bead_ind, next_atom_ind : (next_atom_ind + 3)]
+                r_next = q[next_bead_ind, 3 * next_atom_ind : 3 * (next_atom_ind + 1)]
                 diff = r_next - r
 
                 sumE = sumE + np.dot(diff, diff)
@@ -89,11 +89,11 @@ class ExchangePotential(dobject):
         if j == P - 1:
             # If on the last bead, r_l_jp1 is the first bead of next atom
             next_bead_ind = 0
-            next_atom_ind = 3 * (l + 1)
+            next_atom_ind = l + 1
 
             if l == N - 1:
                 # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
-                next_atom_ind = 3 * (N - k)
+                next_atom_ind = N - k
         return next_atom_ind, next_bead_ind
 
     def Evaluate_dEkn_on_atom(self, l, j, N, k):
