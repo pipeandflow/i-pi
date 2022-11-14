@@ -38,13 +38,65 @@ class ExchangePotential(dobject):
 
         return [V[-1], F]
 
+    def Evaluate_E_Ns(self, N):
+        """
+        Returns a list [E_N^{(1)},...,E_N^{(P)}] as defined in Equation 5 of arXiv:1905.09053.
+        That is, the energy of k particles R_{N-k+1},...,R_N, connected sequentially into a ring polymer.
+        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
+        Calculation using a recursive relation (unlike in the paper)
+        """
+        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
+
+        P = self.nbeads
+        omegaP_sq = self.omegan2
+
+        q = np.zeros((P, 3 * len(self.bosons)), float)
+        qall = dstrip(self.beads.q).copy()
+
+        # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
+        for ind, boson in enumerate(self.bosons):
+            q[:, 3 * ind: (3 * ind + 3)] = qall[:, 3 * boson: (3 * boson + 3)]
+        # q[j,:] stores 3*natoms xyz coordinates of all atoms.
+        # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
+        # TODO: extract somewhere
+        def r_of(atom_index, bead_index):
+            return q[bead_index, 3 * atom_index: 3 * (atom_index + 1)]
+        def r_diff_squared(atom1, bead1, atom2, bead2):
+            diff = r_of(atom2, bead2) - r_of(atom1, bead1)
+            return np.dot(diff, diff)
+        def r_diff_squared_within_ring(atom_index, bead_index):
+            assert bead_index + 1 < P
+            return r_diff_squared(atom_index, bead_index,
+                                  atom_index, bead_index + 1)
+
+        res = np.zeros(N + 1, float)
+
+        for k in range(0, N):
+            added_atom_index = N - k - 1
+            added_atom_potential = sum(r_diff_squared_within_ring(added_atom_index, j) for j in range(P - 1))
+            close_chain_to_added_atom = r_diff_squared(added_atom_index, 0, N-1, P-1)
+            if k > 0:
+                connect_added_atom_to_rest = r_diff_squared(added_atom_index, P - 1, added_atom_index + 1, 0)
+                break_existing_ring = r_diff_squared(added_atom_index + 1, 0, N-1, P-1)
+            else:
+                connect_added_atom_to_rest = 0
+                break_existing_ring = 0
+
+            coefficient = 0.5 * m * omegaP_sq
+            res[k + 1] = res[k] + coefficient * (- break_existing_ring
+                                                 + added_atom_potential + connect_added_atom_to_rest
+                                                 + close_chain_to_added_atom)
+
+        return res
+
+
     def Evaluate_EkN(self, N, k):
         """
         Returns E_N^{(k)} as defined in Equation 5 of arXiv:1905.09053.
-        That is, the energy of k particles R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
+        That is, the energy of k particles R_{N-k+1},...,R_N, connected sequentially into a ring polymer.
         j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
         """
-
+        # TODO: depracated by Evaluate_E_Ns
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
 
         P = self.nbeads
@@ -165,9 +217,11 @@ class ExchangePotential(dobject):
         for m in range(1, N + 1):
             sig = 0.0
 
+            E_Ns = self.Evaluate_E_Ns(m)
+
             # Reversed sum order to be able to use energy of longest ring polymer in Elong
             for k in range(m, 0, -1):
-                E_k_N = self.Evaluate_EkN(m, k)
+                E_k_N = E_Ns[k]
 
                 # This is required for numerical stability. See SI of arXiv:1905.0905
                 if k == m:
