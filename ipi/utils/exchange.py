@@ -240,7 +240,7 @@ class ExchangePotential(dobject):
     def Evaluate_dVB(self, E_k_N, V, l, j):
         """
         Evaluates dVB_m, m = {0,...,N} for bead #(j+1) of atom #(l+1). dVB_0 = 0.0 by definition.
-        Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
+        Evalaution of dVB_m for endpoint beads is based on Equation 2 of SI to arXiv:1905.09053.
         Returns -dVB_N, the force acting on bead #(j+1) of atom #(l+1).
         """
 
@@ -249,13 +249,15 @@ class ExchangePotential(dobject):
 
         dV = np.zeros((N + 1, 3), float)
 
+        if j != 0 and j != self.nbeads - 1:
+            return -1.0 * self.Evaluate_dEkn_on_atom(l, j, N, N)
+
         # Reversed sum order to agree with Evaluate_VB() above
         for m in range(1, N + 1):
             sig = 0
             if l + 1 > m:  # l goes from 0 to N-1 so check for l+1
                 pass  # dV[m,:] is initialized to zero vector already
             else:
-
                 count = m * (m - 1) // 2
                 for k in range(m, 0, -1):
 
