@@ -26,17 +26,29 @@ class ExchangePotential(dobject):
         Calculates spring forces and potential for bosons.
         Evaluated using recursion relation from arXiv:1905.090.
         """
-        (E_k_N, V) = self.Evaluate_VB()
+        (E_Ns, V) = self.Evaluate_VB()
 
         P = self.nbeads
 
-        F = np.zeros((P, 3 * self.natoms), float)
-
-        for ind, l in enumerate(self.bosons):
-            for j in range(P):
-                F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(E_k_N, V, ind, j)
+        F = self.evaluate_dVB_from_VB(E_Ns, V)
 
         return [V[-1], F]
+
+    def evaluate_dVB_from_VB(self, E_Ns, V):
+        P = self.nbeads
+        N = len(self.bosons)
+
+        F = np.zeros((P, 3 * self.natoms), float)
+        for ind, l in enumerate(self.bosons):
+            # force on intermediate beads is independent of the permutation
+            for j in range(1, P - 1):
+                F[j, 3 * l: 3 * (l + 1)] = -1.0 * self.Evaluate_dEkn_on_atom(l, j, N, N)
+                
+        for ind, l in enumerate(self.bosons):
+            for j in [0, P-1]:
+                F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(E_Ns, V, ind, j)
+
+        return F
 
     def Evaluate_E_Ns(self, N):
         """
@@ -248,9 +260,6 @@ class ExchangePotential(dobject):
         betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
 
         dV = np.zeros((N + 1, 3), float)
-
-        if j != 0 and j != self.nbeads - 1:
-            return -1.0 * self.Evaluate_dEkn_on_atom(l, j, N, N)
 
         # Reversed sum order to agree with Evaluate_VB() above
         for m in range(1, N + 1):
