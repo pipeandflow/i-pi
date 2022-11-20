@@ -21,7 +21,7 @@ class ExchangePotential(dobject):
         self.omegan2 = nm.omegan2
         self.ensemble = nm.ensemble
 
-        self._E_Ns, self._V = self.Evaluate_VB()
+        self._Ek_N, self._V = self.Evaluate_VB()
 
     def direct_link_probability(self, l):
         assert 0 <= l < self.nbeads - 1
@@ -264,7 +264,7 @@ class ExchangePotential(dobject):
 
                 sig = sig + np.exp(-betaP * (E_k_N + V[m - k] - Elong))
 
-                save_Ek_N[count] = E_k_N # TODO: no longer necessary
+                save_Ek_N[count] = E_k_N
                 count += 1
 
             V[m] = Elong - np.log(sig / m) / betaP
@@ -300,7 +300,7 @@ class ExchangePotential(dobject):
                     else:
                         dE_k_N = np.zeros(3, float)
                     sig += (dE_k_N + dV[m - k, :]) * np.exp(
-                        -betaP * (self._E_Ns[count] + self._V[m - k])
+                        -betaP * (self._Ek_N[count] + self._V[m - k])
                     )
                     count += 1
 
