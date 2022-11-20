@@ -20,6 +20,7 @@ class ExchangePotential(dobject):
         self.omegan2 = nm.omegan2
         self.ensemble = nm.ensemble
 
+        self._N = len(self.bosons)
         self._P = nm.nbeads
         self._Ek_N, self._V = self.Evaluate_VB()
 
@@ -72,7 +73,7 @@ class ExchangePotential(dobject):
 
         omegaP_sq = self.omegan2
 
-        q = np.zeros((self._P, 3 * len(self.bosons)), float)
+        q = np.zeros((self._P, 3 * self._N), float)
         qall = dstrip(self.beads.q).copy()
 
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
@@ -124,7 +125,7 @@ class ExchangePotential(dobject):
 
         omegaP_sq = self.omegan2
 
-        q = np.zeros((P, 3 * len(self.bosons)), float)
+        q = np.zeros((P, 3 * self._N), float)
         qall = dstrip(self.beads.q).copy()
 
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
@@ -180,7 +181,7 @@ class ExchangePotential(dobject):
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
         omegaP_sq = self.omegan2
 
-        q = np.zeros((self._P, 3 * len(self.bosons)), float)
+        q = np.zeros((self._P, 3 * self._N), float)
         qall = dstrip(self.beads.q).copy()
 
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
@@ -223,8 +224,7 @@ class ExchangePotential(dobject):
         """
         TODO:
         """
-        N = len(self.bosons)
-        return self.Evaluate_dEkn_on_atom(l, j, N, N)
+        return self.Evaluate_dEkn_on_atom(l, j, self._N, self._N)
 
     def Evaluate_VB(self):
         """
@@ -232,15 +232,13 @@ class ExchangePotential(dobject):
         Evaluation of each VB_m is done using Equation 5 of arXiv:1905.0905.
         Returns all VB_m and all E_m^{(k)} which are required for the forces later.
         """
-
-        N = len(self.bosons)
         betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
 
-        V = np.zeros(N + 1, float)
-        save_Ek_N = np.zeros(N * (N + 1) // 2, float)
+        V = np.zeros(self._N + 1, float)
+        save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
         count = 0
-        for m in range(1, N + 1):
+        for m in range(1, self._N + 1):
             sig = 0.0
 
             E_Ns = self.Evaluate_E_Ns(m)
@@ -269,14 +267,12 @@ class ExchangePotential(dobject):
         Evalaution of dVB_m for endpoint beads is based on Equation 2 of SI to arXiv:1905.09053.
         Returns -dVB_N, the force acting on bead #(j+1) of atom #(l+1).
         """
-
-        N = len(self.bosons)
         betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
 
-        dV = np.zeros((N + 1, 3), float)
+        dV = np.zeros((self._N + 1, 3), float)
 
         # Reversed sum order to agree with Evaluate_VB() above
-        for m in range(1, N + 1):
+        for m in range(1, self._N + 1):
             sig = 0
             if l + 1 > m:  # l goes from 0 to N-1 so check for l+1
                 pass  # dV[m,:] is initialized to zero vector already
@@ -297,4 +293,4 @@ class ExchangePotential(dobject):
 
                 dV[m, :] = sig / (m * np.exp(-betaP * self._V[m]))
 
-        return -1.0 * dV[N, :]
+        return -1.0 * dV[self._N, :]
