@@ -15,16 +15,16 @@ class ExchangePotential(dobject):
     def __init__(self, nm):
         assert len(nm.bosons) != 0
         self.bosons = nm.bosons
-        self.beads = nm.beads
-        self.nbeads = nm.nbeads # TODO: make dependence on positions explicit
+        self.beads = nm.beads  # TODO: make dependence on positions explicit
         self.natoms = nm.natoms
         self.omegan2 = nm.omegan2
         self.ensemble = nm.ensemble
 
+        self._P = nm.nbeads
         self._Ek_N, self._V = self.Evaluate_VB()
 
     def direct_link_probability(self, l):
-        assert 0 <= l < self.nbeads - 1
+        assert 0 <= l < self._P - 1
         return 1 - (V_forward(l) * V_backward(l_next)) / self.partition_function(V_b)
 
     def get_vspring_and_fspring(self):
@@ -32,24 +32,19 @@ class ExchangePotential(dobject):
         Calculates spring forces and potential for bosons.
         Evaluated using recursion relation from arXiv:1905.090.
         """
-        P = self.nbeads
-
         F = self.evaluate_dVB_from_VB()
 
         return [self._V[-1], F]
 
     def evaluate_dVB_from_VB(self):
-        P = self.nbeads
-        N = len(self.bosons)
-
-        F = np.zeros((P, 3 * self.natoms), float)
+        F = np.zeros((self._P, 3 * self.natoms), float)
         for ind, l in enumerate(self.bosons):
             # force on intermediate beads is independent of the permutation
-            for j in range(1, P - 1):
+            for j in range(1, self._P - 1):
                 F[j, 3 * l: 3 * (l + 1)] = -1.0 * self.Evaluate_dEkn_on_atom_full_ring(l, j)
 
         for ind, l in enumerate(self.bosons):
-            for j in [0, P - 1]:
+            for j in [0, self._P - 1]:
                 # total_force = 0.0
                 # for peer_boson in range(self.natoms):
                 #     if peer_boson == l:
@@ -75,10 +70,9 @@ class ExchangePotential(dobject):
         """
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
 
-        P = self.nbeads
         omegaP_sq = self.omegan2
 
-        q = np.zeros((P, 3 * len(self.bosons)), float)
+        q = np.zeros((self._P, 3 * len(self.bosons)), float)
         qall = dstrip(self.beads.q).copy()
 
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
@@ -93,7 +87,7 @@ class ExchangePotential(dobject):
             diff = r_of(atom2, bead2) - r_of(atom1, bead1)
             return np.dot(diff, diff)
         def r_diff_squared_within_ring(atom_index, bead_index):
-            assert bead_index + 1 < P
+            assert bead_index + 1 < self._P
             return r_diff_squared(atom_index, bead_index,
                                   atom_index, bead_index + 1)
 
@@ -102,11 +96,11 @@ class ExchangePotential(dobject):
         for k in range(0, N):
             added_atom_index = N - k - 1
             # TODO: vectorize
-            added_atom_potential = sum(r_diff_squared_within_ring(added_atom_index, j) for j in range(P - 1))
-            close_chain_to_added_atom = r_diff_squared(added_atom_index, 0, N-1, P-1)
+            added_atom_potential = sum(r_diff_squared_within_ring(added_atom_index, j) for j in range(self._P - 1))
+            close_chain_to_added_atom = r_diff_squared(added_atom_index, 0, N-1, self._P - 1)
             if k > 0:
-                connect_added_atom_to_rest = r_diff_squared(added_atom_index, P - 1, added_atom_index + 1, 0)
-                break_existing_ring = r_diff_squared(added_atom_index + 1, 0, N-1, P-1)
+                connect_added_atom_to_rest = r_diff_squared(added_atom_index, self._P - 1, added_atom_index + 1, 0)
+                break_existing_ring = r_diff_squared(added_atom_index + 1, 0, N-1, self._P - 1)
             else:
                 connect_added_atom_to_rest = 0
                 break_existing_ring = 0
@@ -128,7 +122,6 @@ class ExchangePotential(dobject):
         # TODO: depracated by Evaluate_E_Ns
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
 
-        P = self.nbeads
         omegaP_sq = self.omegan2
 
         q = np.zeros((P, 3 * len(self.bosons)), float)
@@ -159,7 +152,6 @@ class ExchangePotential(dobject):
         """
         The next atom and bead indices in a ring polymer of k beads over particles R_{N-k+1},...,R_N.
         """
-        P = self.nbeads
         l = atom_index
         j = bead_index
 
@@ -186,10 +178,9 @@ class ExchangePotential(dobject):
         """
 
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-        P = self.nbeads
         omegaP_sq = self.omegan2
 
-        q = np.zeros((P, 3 * len(self.bosons)), float)
+        q = np.zeros((self._P, 3 * len(self.bosons)), float)
         qall = dstrip(self.beads.q).copy()
 
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
@@ -204,7 +195,7 @@ class ExchangePotential(dobject):
         prev_bead_ind = j - 1
         prev_atom_ind = 3 * l
 
-        if j == P - 1:
+        if j == self._P - 1:
             # If on the last bead, r_l_jp1 is the first bead of next atom
             next_bead_ind = 0
             next_atom_ind = 3 * (l + 1)
@@ -215,7 +206,7 @@ class ExchangePotential(dobject):
 
         if j == 0:
             # If on the first bead, r_l_j-1 is the last bead of previous atom
-            prev_bead_ind = P - 1
+            prev_bead_ind = self._P - 1
             prev_atom_ind = 3 * (l - 1)
 
             if l == N - k:
@@ -243,7 +234,7 @@ class ExchangePotential(dobject):
         """
 
         N = len(self.bosons)
-        betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
+        betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
 
         V = np.zeros(N + 1, float)
         save_Ek_N = np.zeros(N * (N + 1) // 2, float)
@@ -280,7 +271,7 @@ class ExchangePotential(dobject):
         """
 
         N = len(self.bosons)
-        betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
+        betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
 
         dV = np.zeros((N + 1, 3), float)
 
