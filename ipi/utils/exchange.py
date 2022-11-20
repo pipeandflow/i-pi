@@ -22,11 +22,8 @@ class ExchangePotential(dobject):
 
         self._N = len(self.bosons)
         self._P = nm.nbeads
-        self._Ek_N, self._V = self.Evaluate_VB()
-
-    def direct_link_probability(self, l):
-        assert 0 <= l < self._P - 1
-        return 1 - (V_forward(l) * V_backward(l_next)) / self.partition_function(V_b)
+        self._Ek_N = self.Evaluate_Ek_N()
+        self._V = self.Evaluate_VB()
 
     def get_vspring_and_fspring(self):
         """
@@ -226,6 +223,24 @@ class ExchangePotential(dobject):
         """
         return self.Evaluate_dEkn_on_atom(l, j, self._N, self._N)
 
+    def Ek_N(self, k, m):
+        end_of_m = m * (m + 1) // 2
+        return self._Ek_N[end_of_m - k]
+
+    def Evaluate_Ek_N(self):
+        save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
+
+        count = 0
+        for m in range(1, self._N + 1):
+            E_Ns = self.Evaluate_E_Ns(m)
+            # Reversed order similar to Evaluate_VB and Evaluate_dVB
+            for k in range(m, 0, -1):
+                save_Ek_N[count] = E_Ns[k]
+                count += 1
+
+        return save_Ek_N
+
+
     def Evaluate_VB(self):
         """
         Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
@@ -235,17 +250,12 @@ class ExchangePotential(dobject):
         betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
 
         V = np.zeros(self._N + 1, float)
-        save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
-        count = 0
         for m in range(1, self._N + 1):
             sig = 0.0
-
-            E_Ns = self.Evaluate_E_Ns(m)
-
             # Reversed sum order to be able to use energy of longest ring polymer in Elong
             for k in range(m, 0, -1):
-                E_k_N = E_Ns[k]
+                E_k_N = self.Ek_N(k, m)
 
                 # This is required for numerical stability. See SI of arXiv:1905.0905
                 if k == m:
@@ -253,12 +263,9 @@ class ExchangePotential(dobject):
 
                 sig = sig + np.exp(-betaP * (E_k_N + V[m - k] - Elong))
 
-                save_Ek_N[count] = E_k_N
-                count += 1
-
             V[m] = Elong - np.log(sig / m) / betaP
 
-        return (save_Ek_N, V)
+        return V
 
 
     def Evaluate_dVB(self, l, j):
@@ -277,9 +284,7 @@ class ExchangePotential(dobject):
             if l + 1 > m:  # l goes from 0 to N-1 so check for l+1
                 pass  # dV[m,:] is initialized to zero vector already
             else:
-                count = m * (m - 1) // 2
                 for k in range(m, 0, -1):
-
                     if (
                         l + 1 >= m - k + 1 and l + 1 <= m
                     ):  # l goes from 0 to N-1 so check for l+1
@@ -287,9 +292,8 @@ class ExchangePotential(dobject):
                     else:
                         dE_k_N = np.zeros(3, float)
                     sig += (dE_k_N + dV[m - k, :]) * np.exp(
-                        -betaP * (self._Ek_N[count] + self._V[m - k])
+                        -betaP * (self.Ek_N(k, m) + self._V[m - k])
                     )
-                    count += 1
 
                 dV[m, :] = sig / (m * np.exp(-betaP * self._V[m]))
 
