@@ -22,6 +22,8 @@ class ExchangePotential(dobject):
 
         self._N = len(self.bosons)
         self._P = nm.nbeads
+        self._betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
+
         self._Ek_N = self.Evaluate_Ek_N()
         self._V = self.Evaluate_VB()
 
@@ -247,8 +249,6 @@ class ExchangePotential(dobject):
         Evaluation of each VB_m is done using Equation 5 of arXiv:1905.0905.
         Returns all VB_m and all E_m^{(k)} which are required for the forces later.
         """
-        betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
-
         V = np.zeros(self._N + 1, float)
 
         for m in range(1, self._N + 1):
@@ -261,9 +261,9 @@ class ExchangePotential(dobject):
                 if k == m:
                     Elong = 0.5 * (E_k_N + V[m - 1])
 
-                sig = sig + np.exp(-betaP * (E_k_N + V[m - k] - Elong))
+                sig = sig + np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
 
-            V[m] = Elong - np.log(sig / m) / betaP
+            V[m] = Elong - np.log(sig / m) / self._betaP
 
         return V
 
@@ -274,8 +274,6 @@ class ExchangePotential(dobject):
         Evalaution of dVB_m for endpoint beads is based on Equation 2 of SI to arXiv:1905.09053.
         Returns -dVB_N, the force acting on bead #(j+1) of atom #(l+1).
         """
-        betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
-
         dV = np.zeros((self._N + 1, 3), float)
 
         # Reversed sum order to agree with Evaluate_VB() above
@@ -292,9 +290,9 @@ class ExchangePotential(dobject):
                     else:
                         dE_k_N = np.zeros(3, float)
                     sig += (dE_k_N + dV[m - k, :]) * np.exp(
-                        -betaP * (self.Ek_N(k, m) + self._V[m - k])
+                        - self._betaP * (self.Ek_N(k, m) + self._V[m - k])
                     )
 
-                dV[m, :] = sig / (m * np.exp(-betaP * self._V[m]))
+                dV[m, :] = sig / (m * np.exp(- self._betaP * self._V[m]))
 
         return -1.0 * dV[self._N, :]
