@@ -16,25 +16,29 @@ class ExchangePotential(dobject):
         assert len(nm.bosons) != 0
         self.bosons = nm.bosons
         self.beads = nm.beads
-        self.nbeads = nm.nbeads
+        self.nbeads = nm.nbeads # TODO: make dependence on positions explicit
         self.natoms = nm.natoms
         self.omegan2 = nm.omegan2
         self.ensemble = nm.ensemble
+
+        self._E_Ns, self._V = self.Evaluate_VB()
+
+    def direct_link_probability(self, l):
+        assert 0 <= l < self.nbeads - 1
+        return 1 - (V_forward(l) * V_backward(l_next)) / self.partition_function(V_b)
 
     def get_vspring_and_fspring(self):
         """
         Calculates spring forces and potential for bosons.
         Evaluated using recursion relation from arXiv:1905.090.
         """
-        (E_Ns, V) = self.Evaluate_VB()
-
         P = self.nbeads
 
-        F = self.evaluate_dVB_from_VB(E_Ns, V)
+        F = self.evaluate_dVB_from_VB()
 
-        return [V[-1], F]
+        return [self._V[-1], F]
 
-    def evaluate_dVB_from_VB(self, E_Ns, V):
+    def evaluate_dVB_from_VB(self):
         P = self.nbeads
         N = len(self.bosons)
 
@@ -42,11 +46,23 @@ class ExchangePotential(dobject):
         for ind, l in enumerate(self.bosons):
             # force on intermediate beads is independent of the permutation
             for j in range(1, P - 1):
-                F[j, 3 * l: 3 * (l + 1)] = -1.0 * self.Evaluate_dEkn_on_atom(l, j, N, N)
-                
+                F[j, 3 * l: 3 * (l + 1)] = -1.0 * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+
         for ind, l in enumerate(self.bosons):
-            for j in [0, P-1]:
-                F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(E_Ns, V, ind, j)
+            for j in [0, P - 1]:
+                # total_force = 0.0
+                # for peer_boson in range(self.natoms):
+                #     if peer_boson == l:
+                #         continue
+                #     if peer_boson == l + 1 and j == P - 1:
+                #         total_force += self.direct_link_probability(l) \
+                #                        * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+                #     if peer_boson == l - 1 and j == 0:
+                #         total_force += self.direct_link_probability(l - 1) \
+                #                        * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+                #         # TODO: handle case of l-1 < 0 (wrap around to P - 1)
+
+                F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
 
         return F
 
@@ -85,6 +101,7 @@ class ExchangePotential(dobject):
 
         for k in range(0, N):
             added_atom_index = N - k - 1
+            # TODO: vectorize
             added_atom_potential = sum(r_diff_squared_within_ring(added_atom_index, j) for j in range(P - 1))
             close_chain_to_added_atom = r_diff_squared(added_atom_index, 0, N-1, P-1)
             if k > 0:
@@ -164,7 +181,7 @@ class ExchangePotential(dobject):
         """
         Returns dE_N^{(k)} as defined in Equation 3 of SI to arXiv:1905.09053.
         That is, the force on bead j of atom l due to k particles
-        R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
+        R_{N-k+1},...,R_N, connected sequentially into a ring polymer.
         j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
         """
 
@@ -211,11 +228,17 @@ class ExchangePotential(dobject):
 
         return m * omegaP_sq * diff
 
+    def Evaluate_dEkn_on_atom_full_ring(self, l, j):
+        """
+        TODO:
+        """
+        N = len(self.bosons)
+        return self.Evaluate_dEkn_on_atom(l, j, N, N)
 
     def Evaluate_VB(self):
         """
         Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
-        Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
+        Evaluation of each VB_m is done using Equation 5 of arXiv:1905.0905.
         Returns all VB_m and all E_m^{(k)} which are required for the forces later.
         """
 
@@ -241,7 +264,7 @@ class ExchangePotential(dobject):
 
                 sig = sig + np.exp(-betaP * (E_k_N + V[m - k] - Elong))
 
-                save_Ek_N[count] = E_k_N
+                save_Ek_N[count] = E_k_N # TODO: no longer necessary
                 count += 1
 
             V[m] = Elong - np.log(sig / m) / betaP
@@ -249,7 +272,7 @@ class ExchangePotential(dobject):
         return (save_Ek_N, V)
 
 
-    def Evaluate_dVB(self, E_k_N, V, l, j):
+    def Evaluate_dVB(self, l, j):
         """
         Evaluates dVB_m, m = {0,...,N} for bead #(j+1) of atom #(l+1). dVB_0 = 0.0 by definition.
         Evalaution of dVB_m for endpoint beads is based on Equation 2 of SI to arXiv:1905.09053.
@@ -277,10 +300,10 @@ class ExchangePotential(dobject):
                     else:
                         dE_k_N = np.zeros(3, float)
                     sig += (dE_k_N + dV[m - k, :]) * np.exp(
-                        -betaP * (E_k_N[count] + V[m - k])
+                        -betaP * (self._E_Ns[count] + self._V[m - k])
                     )
                     count += 1
 
-                dV[m, :] = sig / (m * np.exp(-betaP * V[m]))
+                dV[m, :] = sig / (m * np.exp(-betaP * self._V[m]))
 
         return -1.0 * dV[N, :]
