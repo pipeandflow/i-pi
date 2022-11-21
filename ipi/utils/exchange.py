@@ -62,7 +62,6 @@ class ExchangePotential(dobject):
     def separate_cycle_close_probability(self, l1, l2):
         assert l1 <= l2
 
-        # print(l1, l2, self.V_backward(l2), self.V_forward(l1 - 1), self._V[self._N])
         # TODO: numerical stability style Elong
         prob = (np.math.factorial(l2) * np.math.factorial(self._N - (l2 + 1)) *
                     np.exp(- self._betaP *
@@ -93,53 +92,30 @@ class ExchangePotential(dobject):
                 total_force = 0
 
                 if j == self._P - 1:
-                    sum_prob = 0.0 # TODO: test, remove
-
                     for peer_boson in range(0, l + 1): # l + 1 to include cycle of l with itself
                         lower = peer_boson
                         higher = l
                         total_force += self.separate_cycle_close_probability(lower, higher) \
                                        * (-1.0) * self.Evaluate_dEkn_on_atom(l, j, N=higher+1, k=higher-lower+1)
-                        sum_prob += self.separate_cycle_close_probability(peer_boson, l)
 
                     if l != self._N - 1:
                         total_force += self.direct_link_probability(l) \
                                        * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
-                        sum_prob += self.direct_link_probability(l)
-
-                    print("sum prob end:", l, j, sum_prob)
-                    # else:
-                    #     total_force += self.full_cycle_probability() \
-                    #                    * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
-                    #     sum_prob += self.full_cycle_probability()
 
                 if j == 0:
-                    sum_prob = 0.0 # TODO: test, remove
-
                     for peer_boson in range(l, self._N):
                         lower = l
                         higher = peer_boson
                         total_force += self.separate_cycle_close_probability(lower, higher) \
                                        * (-1.0) * self.Evaluate_dEkn_on_atom(l, j, N=higher+1, k=higher-lower+1)
-                        sum_prob += self.separate_cycle_close_probability(l, peer_boson)
 
                     if l != 0:
                         total_force += self.direct_link_probability(l - 1) \
                                        * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l - 1, j)
-                        sum_prob += self.direct_link_probability(l - 1)
 
-                    print("sum prob begin:", l, j, sum_prob)
-                    # else:
-                    #     total_force += self.full_cycle_probability() \
-                    #                    * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+                # F[j, 3 * l: 3 * (l + 1)] = total_force
 
-                # print("mine", total_force)
-                # print("note", self.Evaluate_dVB(ind, j))
-                # assert all(total_force == self.Evaluate_dVB(ind, j))
-
-                F[j, 3 * l: 3 * (l + 1)] = total_force
-
-                # F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
+                F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
 
         return F
 
