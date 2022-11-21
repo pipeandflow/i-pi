@@ -56,7 +56,6 @@ class ExchangePotential(dobject):
                     (np.math.factorial(self._N) *
                      np.exp(- self._betaP * self._V[self._N]))
                     )
-        assert 0 <= prob <= 1
         return prob
 
     def separate_cycle_close_probability(self, l1, l2):
@@ -68,7 +67,6 @@ class ExchangePotential(dobject):
                       (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2)))) \
                / (np.math.factorial(self._N) *
                     np.exp(- self._betaP * self._V[self._N]))
-        assert 0 <= prob <= 1, prob
         return prob
 
     def get_vspring_and_fspring(self):
@@ -111,11 +109,10 @@ class ExchangePotential(dobject):
 
                     if l != 0:
                         total_force += self.direct_link_probability(l - 1) \
-                                       * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l - 1, j)
+                                       * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
 
-                # F[j, 3 * l: 3 * (l + 1)] = total_force
-
-                F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
+                F[j, 3 * l: 3 * (l + 1)] = total_force
+                # F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
 
         return F
 
