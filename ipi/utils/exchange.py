@@ -27,6 +27,51 @@ class ExchangePotential(dobject):
         self._Ek_N = self.Evaluate_Ek_N()
         self._V = self.Evaluate_VB()
 
+        self._V_backward = self.Evaluate_V_backward()
+
+    def V_forward(self, l):
+        """
+        V_forward(l) is V[l+1]: log the weight of the representative permutations on particles 0,...,l.
+        """
+        return self._V[l + 1]
+
+    def V_backward(self, s):
+        """
+        V_backward[s] is the same recursive calculation of V with a different initial condition: V(s) = 0.
+        This is log the weight of the representative permutations on particles N-s-1,...,N-1.
+        """
+        return self._V_backward[s + 1]
+
+    # def full_cycle_probability(self):
+    #     return np.exp(- self._betaP * self.Ek_N(self._N, self._N)) / (self._N * self.V_forward(self._N))
+
+    def direct_link_probability(self, l):
+        """
+        The probability that l,l+1 (l=0...N-1) are joined in the same ring.
+        Computed by 1 - the probability that a cycle "cuts" exactly between l,l+1.
+        """
+        assert 0 <= l < self._N - 1
+        prob = 1 - (np.math.factorial(l + 1) * np.math.factorial(self._N - (l + 1)) *
+                    np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l))) /
+                    (np.math.factorial(self._N) *
+                     np.exp(- self._betaP * self._V[self._N]))
+                    )
+        assert 0 <= prob <= 1
+        return prob
+
+    def separate_cycle_close_probability(self, l1, l2):
+        assert l1 <= l2
+
+        # print(l1, l2, self.V_backward(l2), self.V_forward(l1 - 1), self._V[self._N])
+        # TODO: numerical stability style Elong
+        prob = (np.math.factorial(l2) * np.math.factorial(self._N - (l2 + 1)) *
+                    np.exp(- self._betaP *
+                      (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2)))) \
+               / (np.math.factorial(self._N) *
+                    np.exp(- self._betaP * self._V[self._N]))
+        assert 0 <= prob <= 1, prob
+        return prob
+
     def get_vspring_and_fspring(self):
         """
         Calculates spring forces and potential for bosons.
@@ -45,25 +90,62 @@ class ExchangePotential(dobject):
 
         for ind, l in enumerate(self.bosons):
             for j in [0, self._P - 1]:
-                # total_force = 0.0
-                # for peer_boson in range(self.natoms):
-                #     if peer_boson == l:
-                #         continue
-                #     if peer_boson == l + 1 and j == P - 1:
-                #         total_force += self.direct_link_probability(l) \
-                #                        * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
-                #     if peer_boson == l - 1 and j == 0:
-                #         total_force += self.direct_link_probability(l - 1) \
-                #                        * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
-                #         # TODO: handle case of l-1 < 0 (wrap around to P - 1)
+                total_force = 0
 
-                F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
+                if j == self._P - 1:
+                    sum_prob = 0.0 # TODO: test, remove
+
+                    for peer_boson in range(0, l + 1): # l + 1 to include cycle of l with itself
+                        lower = peer_boson
+                        higher = l
+                        total_force += self.separate_cycle_close_probability(lower, higher) \
+                                       * (-1.0) * self.Evaluate_dEkn_on_atom(l, j, N=higher+1, k=higher-lower+1)
+                        sum_prob += self.separate_cycle_close_probability(peer_boson, l)
+
+                    if l != self._N - 1:
+                        total_force += self.direct_link_probability(l) \
+                                       * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+                        sum_prob += self.direct_link_probability(l)
+
+                    print("sum prob end:", l, j, sum_prob)
+                    # else:
+                    #     total_force += self.full_cycle_probability() \
+                    #                    * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+                    #     sum_prob += self.full_cycle_probability()
+
+                if j == 0:
+                    sum_prob = 0.0 # TODO: test, remove
+
+                    for peer_boson in range(l, self._N):
+                        lower = l
+                        higher = peer_boson
+                        total_force += self.separate_cycle_close_probability(lower, higher) \
+                                       * (-1.0) * self.Evaluate_dEkn_on_atom(l, j, N=higher+1, k=higher-lower+1)
+                        sum_prob += self.separate_cycle_close_probability(l, peer_boson)
+
+                    if l != 0:
+                        total_force += self.direct_link_probability(l - 1) \
+                                       * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l - 1, j)
+                        sum_prob += self.direct_link_probability(l - 1)
+
+                    print("sum prob begin:", l, j, sum_prob)
+                    # else:
+                    #     total_force += self.full_cycle_probability() \
+                    #                    * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+
+                # print("mine", total_force)
+                # print("note", self.Evaluate_dVB(ind, j))
+                # assert all(total_force == self.Evaluate_dVB(ind, j))
+
+                F[j, 3 * l: 3 * (l + 1)] = total_force
+
+                # F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
 
         return F
 
     def Evaluate_E_Ns(self, N):
         """
-        Returns a list [E_N^{(1)},...,E_N^{(P)}] as defined in Equation 5 of arXiv:1905.09053.
+        Returns a list [E_N^{(1)},...,E_N^{(k)}] as defined in Equation 5 of arXiv:1905.09053.
         That is, the energy of k particles R_{N-k+1},...,R_N, connected sequentially into a ring polymer.
         j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
         Calculation using a recursive relation (unlike in the paper)
@@ -242,7 +324,6 @@ class ExchangePotential(dobject):
 
         return save_Ek_N
 
-
     def Evaluate_VB(self):
         """
         Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
@@ -263,7 +344,35 @@ class ExchangePotential(dobject):
 
                 sig = sig + np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
 
+            assert sig != 0.0
             V[m] = Elong - np.log(sig / m) / self._betaP
+
+        return V
+
+    def Evaluate_VB_s(self, start_index):
+        """
+        Evaluate VB^m_s, m = {s,...,N}. VB_{s-1} = 0.0 by definition.
+        Evaluation of each VB^m_s is done using an adaptation of the standard formula.
+        """
+        s = start_index + 1 # TODO: choose consistent indices...
+        V = np.zeros(self._N + 1, float)
+
+        for m in range(start_index + 1, self._N + 1):
+            sig = 0.0
+            # Reversed sum order to be able to use energy of longest ring polymer in Elong
+            for k in range(m - start_index, 0, -1):
+                E_k_N = self.Ek_N(k, m)
+
+                # This is required for numerical stability. See SI of arXiv:1905.0905
+                if k == m - start_index:
+                    Elong = 0.5 * (E_k_N + V[m - 1])
+
+                prefactor = np.math.factorial(m - 1) * np.math.factorial(m- k- s + 1) / \
+                            (np.math.factorial(m - s + 1) * np.math.factorial(m - k))
+                sig += prefactor * np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
+
+            assert sig != 0.0
+            V[m] = Elong - np.log(sig) / self._betaP
 
         return V
 
@@ -296,3 +405,10 @@ class ExchangePotential(dobject):
                 dV[m, :] = sig / (m * np.exp(- self._betaP * self._V[m]))
 
         return -1.0 * dV[self._N, :]
+
+    def Evaluate_V_backward(self):
+        res = np.zeros(self._N + 1)
+        for i in range(self._N + 1):
+            res[i] = self.Evaluate_VB_s(i)[-1]
+        assert res[0] == self._V[-1]
+        return res
