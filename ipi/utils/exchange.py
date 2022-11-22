@@ -410,6 +410,7 @@ class ExchangePotential(dobject):
                 #     Elong = 0.5 * (E_k_p + V[l - 1])
                 Elong = 0.0
 
+                # TODO: factorial memoization (important for asymptotic complexity)
                 prefactor = (np.math.factorial(p) * np.math.factorial(self._N - (p + 1))) \
                             / (np.math.factorial(l) * np.math.factorial(self._N - l))
                 sig += prefactor * np.exp(- self._betaP * (E_k_p + RV[p + 1]
