@@ -20,6 +20,8 @@ class ExchangePotential(dobject):
         self.omegan2 = nm.omegan2
         self.ensemble = nm.ensemble
 
+        self._factorial_cache = FactorialMemoization()
+
         self._N = len(self.bosons)
         self._P = nm.nbeads
         self._betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
@@ -28,6 +30,9 @@ class ExchangePotential(dobject):
         self._V = self.Evaluate_VB()
 
         self._V_backward = self.Evaluate_V_backward_from_V_forward()
+
+    def _factorial(self, n):
+        return self._factorial_cache.factorial(n)
 
     def V_forward(self, l):
         """
@@ -51,9 +56,9 @@ class ExchangePotential(dobject):
         Computed by 1 - the probability that a cycle "cuts" exactly between l,l+1.
         """
         assert 0 <= l < self._N - 1
-        prob = 1 - (np.math.factorial(l + 1) * np.math.factorial(self._N - (l + 1)) *
+        prob = 1 - (self._factorial(l + 1) * self._factorial(self._N - (l + 1)) *
                     np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l))) /
-                    (np.math.factorial(self._N) *
+                    (self._factorial(self._N) *
                      np.exp(- self._betaP * self._V[self._N]))
                     )
         return prob
@@ -62,10 +67,10 @@ class ExchangePotential(dobject):
         assert l1 <= l2
 
         # TODO: numerical stability style Elong
-        prob = (np.math.factorial(l2) * np.math.factorial(self._N - (l2 + 1)) *
+        prob = (self._factorial(l2) * self._factorial(self._N - (l2 + 1)) *
                     np.exp(- self._betaP *
                       (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2)))) \
-               / (np.math.factorial(self._N) * 
+               / (self._factorial(self._N) *
                     np.exp(- self._betaP * self._V[self._N]))
         return prob
 
@@ -341,8 +346,8 @@ class ExchangePotential(dobject):
                 if k == m - start_index:
                     Elong = 0.5 * (E_k_N + V[m - 1])
 
-                prefactor = np.math.factorial(m - 1) * np.math.factorial(m- k- s + 1) / \
-                            (np.math.factorial(m - s + 1) * np.math.factorial(m - k))
+                prefactor = self._factorial(m - 1) * self._factorial(m- k- s + 1) / \
+                            (self._factorial(m - s + 1) * self._factorial(m - k))
                 sig += prefactor * np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
 
             assert sig != 0.0
@@ -410,9 +415,8 @@ class ExchangePotential(dobject):
                 #     Elong = 0.5 * (E_k_p + V[l - 1])
                 Elong = 0.0
 
-                # TODO: factorial memoization (important for asymptotic complexity)
-                prefactor = (np.math.factorial(p) * np.math.factorial(self._N - (p + 1))) \
-                            / (np.math.factorial(l) * np.math.factorial(self._N - l))
+                prefactor = (self._factorial(p) * self._factorial(self._N - (p + 1))) \
+                            / (self._factorial(l) * self._factorial(self._N - l))
                 sig += prefactor * np.exp(- self._betaP * (E_k_p + RV[p + 1]
                                                            # cancel: + self.V_forward(l - 1) - self.V_forward(l - 1)
                                                            - Elong))
@@ -425,3 +429,12 @@ class ExchangePotential(dobject):
 
         return RV
 
+
+class FactorialMemoization(object):
+    def __init__(self):
+        self._cache = {}
+
+    def factorial(self, n):
+        if n in self._cache:
+            return self._cache[n]
+        return np.math.factorial(n)
