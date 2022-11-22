@@ -27,7 +27,7 @@ class ExchangePotential(dobject):
         self._Ek_N = self.Evaluate_Ek_N()
         self._V = self.Evaluate_VB()
 
-        self._V_backward = self.Evaluate_V_backward()
+        self._V_backward = self.Evaluate_V_backward_from_V_forward()
 
     def V_forward(self, l):
         """
@@ -65,7 +65,7 @@ class ExchangePotential(dobject):
         prob = (np.math.factorial(l2) * np.math.factorial(self._N - (l2 + 1)) *
                     np.exp(- self._betaP *
                       (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2)))) \
-               / (np.math.factorial(self._N) *
+               / (np.math.factorial(self._N) * # TODO: missing (l2 - l1)! ?
                     np.exp(- self._betaP * self._V[self._N]))
         return prob
 
@@ -323,6 +323,7 @@ class ExchangePotential(dobject):
         return V
 
     def Evaluate_VB_s(self, start_index):
+        # TODO: depracated
         """
         Evaluate VB^m_s, m = {s,...,N}. VB_{s-1} = 0.0 by definition.
         Evaluation of each VB^m_s is done using an adaptation of the standard formula.
@@ -380,8 +381,46 @@ class ExchangePotential(dobject):
         return -1.0 * dV[self._N, :]
 
     def Evaluate_V_backward(self):
+        # TODO: depracated
         res = np.zeros(self._N + 1)
         for i in range(self._N + 1):
             res[i] = self.Evaluate_VB_s(i)[-1]
         # holds approximately: assert res[0] == self._V[-1]
         return res
+
+    def Evaluate_V_backward_from_V_forward(self):
+        """
+        Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
+        Evaluation of each VB_m is done using Equation 5 of arXiv:1905.0905.
+        Returns all VB_m and all E_m^{(k)} which are required for the forces later.
+        """
+        RV = np.zeros(self._N + 1, float)
+
+        for l in range(self._N - 1, 0, -1):
+            sig = 0.0
+            # sum order to be able to use energy of longest ring polymer in Elong
+            for p in range(l, self._N):
+                # comparing sum of self.separate_cycle_close_probability(l, _) with self.direct_link_probability(l - 1)
+                k = p - l + 1
+                E_k_p = self.Ek_N(k, p + 1)
+
+                # This is required for numerical stability. See SI of arXiv:1905.0905
+                # TODO:
+                # if p == l:
+                #     Elong = 0.5 * (E_k_p + V[l - 1])
+                Elong = 0.0
+
+                prefactor = (np.math.factorial(p) * np.math.factorial(self._N - (p + 1))) \
+                            / (np.math.factorial(l) * np.math.factorial(self._N - l))
+                sig += prefactor * np.exp(- self._betaP * (E_k_p + RV[p + 1]
+                                                           # cancel: + self.V_forward(l - 1) - self.V_forward(l - 1)
+                                                           - Elong))
+
+            assert sig != 0.0
+            RV[l] = Elong - np.log(sig) / self._betaP
+
+        # V^{(N)}_{(1)}
+        RV[0] = self._V[-1]
+
+        return RV
+
