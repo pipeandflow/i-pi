@@ -65,7 +65,7 @@ class ExchangePotential(dobject):
         prob = (np.math.factorial(l2) * np.math.factorial(self._N - (l2 + 1)) *
                     np.exp(- self._betaP *
                       (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2)))) \
-               / (np.math.factorial(self._N) * # TODO: missing (l2 - l1)! ?
+               / (np.math.factorial(self._N) * 
                     np.exp(- self._betaP * self._V[self._N]))
         return prob
 
