@@ -3,7 +3,7 @@ import sys
 import logging
 import subprocess
 import re
-import typing
+# import typing
 # import statistics
 # import matplotlib.pyplot as plt
 import random # TODO: boo!
@@ -13,9 +13,9 @@ import itertools
 import tempfile
 from scipy import stats
 import math
-import pathlib
+import os
 
-BOSON_SCALING_CSV_OUTPUT_PATH = pathlib.Path(__file__).parent.resolve() / "boson_scaling.csv"
+BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "boson_scaling.csv")
 
 SINGLE_BENCH_TIMEOUT_SECONDS = 1800
 
