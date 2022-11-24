@@ -1,0 +1,268 @@
+import time
+import sys
+import logging
+import subprocess
+import re
+from dataclasses import dataclass, fields, asdict
+import typing
+import statistics
+# import matplotlib.pyplot as plt
+import random # TODO: boo!
+import numpy as np
+import csv
+import itertools
+import tempfile
+from scipy import stats
+import math
+import pathlib
+
+BOSON_SCALING_CSV_OUTPUT_PATH = pathlib.Path(__file__).parent.resolve() / "boson_scaling.csv"
+
+SINGLE_BENCH_TIMEOUT_SECONDS = 1800
+
+def ipi_config(boson_positions, boson_masses, boson_labels, bosons_list):
+    INPUT_XML_TEMPLATE = f"""<!--REGTEST
+COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
+ENDREGTEST-->
+<simulation threading='False' verbosity='low'>
+
+<ffsocket mode='unix' name='driver'>
+        <address> 31415  </address>
+</ffsocket>
+
+<total_steps> 100 </total_steps>
+
+<output prefix="data">
+  <trajectory stride="100" filename="pos" cell_units="angstrom">positions{{angstrom}}</trajectory>
+  <!--<trajectory stride="1" filename="xc" format="xyz">x_centroid{{angstrom}}</trajectory>-->
+  <properties stride="100"> [ step, time{{femtosecond}}, conserved, temperature{{kelvin}}, kinetic_cv,
+        potential, virial_fq ] </properties>
+</output>
+
+<prng>
+  <seed> 18885 </seed>
+</prng>
+
+<system>
+
+  <forces>
+      <force forcefield="driver"></force>
+  </forces>
+
+  <initialize nbeads="32">
+    <positions mode="manual" bead="0"> {boson_positions} </positions>
+    <masses mode="manual"> {boson_masses} </masses>
+    <labels mode="manual"> {boson_labels} </labels>
+    <cell>
+     [   2500, 0, 0, 0, 2500, 0, 0, 0, 2500 ]
+    </cell>
+    <velocities mode='thermal' units='kelvin'> 17.4 </velocities>
+  </initialize>
+
+  <normal_modes propagator='bab'>
+          <nmts> 10 </nmts>
+          <bosons> {bosons_list} </bosons>
+  </normal_modes>
+
+  <ensemble>
+     <temperature units="kelvin"> 17.4 </temperature>
+  </ensemble>
+
+  <motion mode="dynamics">
+    <fixcom> False </fixcom>
+    <dynamics mode="nvt">
+     <timestep units="femtosecond"> 1 </timestep>
+      <thermostat mode='pile_l'>
+            <tau units='femtosecond'>100</tau>
+      </thermostat>
+
+    </dynamics>
+  </motion>
+
+</system>
+
+</simulation>
+"""
+    return INPUT_XML_TEMPLATE
+
+global logger
+
+def set_logger():
+    logging.basicConfig(format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                        datefmt='%H:%M:%S',
+                        level=logging.DEBUG,
+                        handlers=[
+                                            logging.FileHandler("%s-bench.log" % time.strftime("%Y%m%d-%H%M%S")),
+                                            logging.StreamHandler()
+                                    ])
+
+    global logger
+    logger = logging.getLogger(__name__)
+
+def flatten(list_of_lists):
+    return list(itertools.chain.from_iterable(list_of_lists))
+
+def stringify_elementwise(lst):
+    return [str(x) for x in lst]
+
+def time_ipi(input_filename):
+    # Run i-pi
+
+    # duplicated from ipi/ipi_tests/test_tools.py: Runner.run()
+
+    call_ipi="i-pi " + input_filename
+    clientcall = "i-pi-driver -u -m harm3d -o 1.21647924E-8 -h 31415" # TODO: fixed port
+
+    logger.debug("Start i-pi server")
+
+    ipi = subprocess.Popen(
+        call_ipi,
+        # cwd=(self.tmp_dir),
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    # if len(clients) > 0:
+    #     f_connected = False
+    #     for client in clients:
+    #         for i in range(50):
+    #             if os.path.exists("/tmp/ipi_" + client[2]):
+    #                 f_connected = True
+    #                 break
+    #             else:
+    #                 time.sleep(0.5)
+    #         if not f_connected:
+    #             print("Could not find the i-PI UNIX socket.")
+    #             return "Could not find the i-PI UNIX socket"
+
+    # Run drivers by defining cmd2 which will be called, eventually
+    driver = list()
+
+    # for client in clients:
+    #     if client[1] == "unix":
+    #         clientcall = call_driver + " -m {} {} {} -u ".format(
+    #             client[0], address_key, client[2]
+    #         )
+    #     elif client[1] == "inet":
+    #         clientcall = call_driver + " -m {} {} {} -p {}".format(
+    #             client[0], client[2], address_key, client[3]
+    #         )
+
+    #     else:
+    #         raise ValueError("Driver mode has to be either unix or inet")
+
+    cmd = clientcall
+
+    # Add extra flags if necessary
+    # if any("-" in str(s) for s in client):
+    #     flag_indeces = [
+    #         i for i, elem in enumerate(client) if "-" in str(elem)
+    #     ]
+    #     for i, ll in enumerate(flag_indeces):
+    #         if i < len(flag_indeces) - 1:
+    #             cmd += " {} {}".format(
+    #                 client[ll],
+    #                 ",".join(client[ll + 1 : flag_indeces[i + 1]][:]),
+    #             )
+    #         else:
+    #             cmd += " {} {}".format(
+    #                 client[ll], ",".join(client[ll + 1 :][:])
+    #             )
+    # print("cmd:", cmd)
+
+    time.sleep(5)
+    logger.debug("Start driver execution")
+
+
+    start_time = time.time()
+
+    driver.append(
+        subprocess.Popen(cmd,
+                         # cwd=(cwd),
+                         shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    )
+
+    logger.debug("Start wait for ipi process")
+
+    ipi_error = ipi.communicate(timeout=SINGLE_BENCH_TIMEOUT_SECONDS)[1].decode("ascii")
+    if ipi_error != "":
+        print(ipi_error)
+    assert "" == ipi_error, "IPI ERROR OCCURRED: {}".format(ipi_error)
+
+    end_time = time.time()
+
+    logger.debug("i-pi run ended; time %s" % str(end_time - start_time))
+
+    return end_time - start_time
+
+def bench_ipi(input_xml_str):
+        # TODO: store output
+
+        # code duplicated from ipi/ipi_tests/test_tools.py: Runner.run()
+    with tempfile.NamedTemporaryFile(mode="wt") as tmp:
+        tmp.write(input_xml_str)
+        tmp.flush()
+        measured_time = time_ipi(tmp.name)
+        return measured_time
+
+def bench_bosons_single(nbosons, boson_positions):
+    assert len(boson_positions) == nbosons
+
+    boson_positions_config = str(flatten(boson_positions))
+
+    boson_labels = str(["E"] * nbosons)
+    boson_masses = str(["1.0"] * nbosons)
+    bosons_list = str(list(range(nbosons)))
+
+    config = ipi_config(boson_positions_config, boson_masses, boson_labels, bosons_list)
+    logger.debug("ipi config: %s" % config)
+    return bench_ipi(config)
+
+def random_position():
+    RANDOM_RANGE_LOWER = -100
+    RANDOM_RANGE_UPPER = 100
+    return random.randint(RANDOM_RANGE_LOWER, RANDOM_RANGE_UPPER)
+
+def random_boson_positions(nbosons):
+    return [[random_position(), random_position(), random_position()] for _ in range(nbosons)]
+
+def bench_bosons(nbosons):
+    NUM_REPETITIONS = 5
+
+    boson_positions = random_boson_positions(nbosons)
+
+    time_measurements = [bench_bosons_single(nbosons, boson_positions) for _ in range(0, NUM_REPETITIONS)]
+    return statistics.mean(time_measurements)
+
+def boson_scalability(boson_numbers):
+    with open(BOSON_SCALING_CSV_OUTPUT_PATH, "wt") as csv_log:
+        w = csv.DictWriter(csv_log, ["nbosons", "time"])
+        w.writeheader()
+        csv_log.flush()
+
+        for nbosons in boson_numbers:
+            time = bench_bosons(nbosons)
+            w.writerow({"nbosons": nbosons, "time": time})
+            csv_log.flush()
+
+
+def main():
+    set_logger()
+
+    MIN_N = 4
+    MAX_N = 20
+    INCREMENT = 4
+
+    boson_numbers = list(range(MIN_N, MAX_N + 1, INCREMENT))
+
+    # data = [50.40257749557495,59.794443941116334,72.87862811088561,93.42628455162048,109.0871886253357,126.66572160720825,146.1177580356598,159.70166630744933]
+    # data_log = [math.log(x) for x in data]
+    # slope, intercept, r, p, std_err = stats.linregress([math.log(x) for x in range(1, MAX_N + 1)], data)
+    # print(slope, intercept, r, p)
+
+    # assert False
+
+    boson_scalability(boson_numbers)
+
+if __name__ == "__main__":
+    main()
