@@ -21,7 +21,7 @@ BOSON_SCALING_CSV_OUTPUT_PATH = pathlib.Path(__file__).parent.resolve() / "boson
 SINGLE_BENCH_TIMEOUT_SECONDS = 1800
 
 def ipi_config(boson_positions, boson_masses, boson_labels, bosons_list):
-    INPUT_XML_TEMPLATE = f"""<!--REGTEST
+    INPUT_XML_TEMPLATE = """<!--REGTEST
 COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
 ENDREGTEST-->
 <simulation threading='False' verbosity='low'>
@@ -83,7 +83,7 @@ ENDREGTEST-->
 
 </simulation>
 """
-    return INPUT_XML_TEMPLATE
+    return INPUT_XML_TEMPLATE.format(boson_positions=boson_positions, boson_masses=boson_masses, boson_labels=boson_labels, bosons_list=bosons_list)
 
 global logger
 
@@ -249,8 +249,8 @@ def boson_scalability(boson_numbers):
 def main():
     set_logger()
 
-    MIN_N = 4
-    MAX_N = 20
+    MIN_N = 1
+    MAX_N = 1
     INCREMENT = 4
 
     boson_numbers = list(range(MIN_N, MAX_N + 1, INCREMENT))
