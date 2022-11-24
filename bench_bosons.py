@@ -3,9 +3,8 @@ import sys
 import logging
 import subprocess
 import re
-from dataclasses import dataclass, fields, asdict
 import typing
-import statistics
+# import statistics
 # import matplotlib.pyplot as plt
 import random # TODO: boo!
 import numpy as np
@@ -104,6 +103,9 @@ def flatten(list_of_lists):
 
 def stringify_elementwise(lst):
     return [str(x) for x in lst]
+
+def mean(lst):
+    return sum(lst) / len(lst)
 
 def time_ipi(input_filename):
     # Run i-pi
