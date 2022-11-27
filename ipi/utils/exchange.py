@@ -45,7 +45,13 @@ class ExchangePotential(dobject):
         V_backward[s] is the same recursive calculation of V with a different initial condition: V(s) = 0.
         This is log the weight of the representative permutations on particles N-s-1,...,N-1.
         """
-        return self._V_backward[s + 1]
+        return self._V_backward[s]
+
+    def V_all(self):
+        """
+        V_(1)^(N), which is V_forward(self._N - 1) == self.V_backward(0)
+        """
+        return self._V[self._N]
 
     # def full_cycle_probability(self):
     #     return np.exp(- self._betaP * self.Ek_N(self._N, self._N)) / (self._N * self.V_forward(self._N))
@@ -57,9 +63,9 @@ class ExchangePotential(dobject):
         """
         assert 0 <= l < self._N - 1
         prob = 1 - (self._factorial(l + 1) * self._factorial(self._N - (l + 1)) *
-                    np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l))) /
+                    np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1))) /
                     (self._factorial(self._N) *
-                     np.exp(- self._betaP * self._V[self._N]))
+                     np.exp(- self._betaP * self.V_all()))
                     )
         return prob
 
@@ -69,9 +75,9 @@ class ExchangePotential(dobject):
         # TODO: numerical stability style Elong
         prob = (self._factorial(l2) * self._factorial(self._N - (l2 + 1)) *
                     np.exp(- self._betaP *
-                      (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2)))) \
+                      (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2 + 1)))) \
                / (self._factorial(self._N) *
-                    np.exp(- self._betaP * self._V[self._N]))
+                    np.exp(- self._betaP * self.V_all()))
         return prob
 
     def get_vspring_and_fspring(self):
@@ -80,6 +86,9 @@ class ExchangePotential(dobject):
         Evaluated using recursion relation from arXiv:1905.090.
         """
         F = self.evaluate_dVB_from_VB()
+        # for ind, l in enumerate(self.bosons):
+        #     for j in range(self._P):
+        #         print("force", l, j, F[j, 3 * l: 3 * (l + 1)])
 
         return [self._V[-1], F]
 
