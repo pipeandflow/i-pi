@@ -288,7 +288,7 @@ class ExchangePotential(dobject):
         for m in range(1, self._N + 1):
             sig = 0.0
             # This is required for numerical stability. See SI of arXiv:1905.0905
-            Elong = 0.5 * (self.Ek_N(m, m) + V[0])
+            Elong = min(self.Ek_N(m, 1) + V[m-1], self.Ek_N(m, m) + V[0])
 
             # TODO: Reversed sum order for reasons that are not obsolete (had to do with Elong)
             for k in range(m, 0, -1):
@@ -311,7 +311,7 @@ class ExchangePotential(dobject):
         for l in range(self._N - 1, 0, -1):
             sig = 0.0
             # For numerical stability. See SI of arXiv:1905.0905
-            Elong = 0.5 * (self.Ek_N(1, l + 1) + RV[l + 1])
+            Elong = min(self.Ek_N(1, l + 1) + RV[l + 1], self.Ek_N(self._N - l, self._N) + RV[self._N])
 
             # TODO: sum order for reasons that are now obsolete (had to with Elong)
             for p in range(l, self._N):
