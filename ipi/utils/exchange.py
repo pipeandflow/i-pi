@@ -62,22 +62,28 @@ class ExchangePotential(dobject):
         Computed by 1 - the probability that a cycle "cuts" exactly between l,l+1.
         """
         assert 0 <= l < self._N - 1
-        prob = 1 - (self._factorial(l + 1) * self._factorial(self._N - (l + 1)) *
-                    np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1))) /
-                    (self._factorial(self._N) *
-                     np.exp(- self._betaP * self.V_all()))
-                    )
+        # prob = 1 - (self._factorial(l + 1) * self._factorial(self._N - (l + 1)) *
+        #             np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1))) /
+        #             (self._factorial(self._N) *
+        #              np.exp(- self._betaP * self.V_all()))
+        #             )
+        prob = 1 - (self._factorial(l + 1) * self._factorial(self._N - (l + 1)) / self._factorial(self._N) *
+                    np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
+                                            self.V_all())))
         return prob
 
     def separate_cycle_close_probability(self, l1, l2):
         assert l1 <= l2
 
-        # TODO: numerical stability style Elong
-        prob = (self._factorial(l2) * self._factorial(self._N - (l2 + 1)) *
-                    np.exp(- self._betaP *
-                      (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2 + 1)))) \
-               / (self._factorial(self._N) *
-                    np.exp(- self._betaP * self.V_all()))
+        # prob = (self._factorial(l2) * self._factorial(self._N - (l2 + 1)) *
+        #             np.exp(- self._betaP *
+        #               (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2 + 1)))) \
+        #        / (self._factorial(self._N) *
+        #             np.exp(- self._betaP * self.V_all()))
+        prob = self._factorial(l2) * self._factorial(self._N - (l2 + 1)) / self._factorial(self._N) * \
+               np.exp(- self._betaP *
+                       (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2 + 1)
+                        - self.V_all()))
         return prob
 
     def get_vspring_and_fspring(self):
