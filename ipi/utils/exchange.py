@@ -418,11 +418,9 @@ class ExchangePotential(dobject):
                 k = p - l + 1
                 E_k_p = self.Ek_N(k, p + 1)
 
-                # This is required for numerical stability. See SI of arXiv:1905.0905
-                # TODO:
-                # if p == l:
-                #     Elong = 0.5 * (E_k_p + V[l - 1])
-                Elong = 0.0
+                # For numerical stability. See SI of arXiv:1905.0905
+                if p == l:
+                     Elong = 0.5 * (E_k_p + RV[l + 1])
 
                 prefactor = (self._factorial(p) * self._factorial(self._N - (p + 1))) \
                             / (self._factorial(l) * self._factorial(self._N - l))
