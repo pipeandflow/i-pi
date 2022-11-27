@@ -287,14 +287,12 @@ class ExchangePotential(dobject):
 
         for m in range(1, self._N + 1):
             sig = 0.0
-            # Reversed sum order to be able to use energy of longest ring polymer in Elong
+            # This is required for numerical stability. See SI of arXiv:1905.0905
+            Elong = 0.5 * (self.Ek_N(m, m) + V[0])
+
+            # TODO: Reversed sum order for reasons that are not obsolete (had to do with Elong)
             for k in range(m, 0, -1):
                 E_k_N = self.Ek_N(k, m)
-
-                # This is required for numerical stability. See SI of arXiv:1905.0905
-                if k == m:
-                    Elong = 0.5 * (E_k_N + V[m - 1])
-
                 sig = sig + np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
 
             assert sig != 0.0
@@ -312,15 +310,14 @@ class ExchangePotential(dobject):
 
         for l in range(self._N - 1, 0, -1):
             sig = 0.0
-            # sum order to be able to use energy of longest ring polymer in Elong
+            # For numerical stability. See SI of arXiv:1905.0905
+            Elong = 0.5 * (self.Ek_N(1, l + 1) + RV[l + 1])
+
+            # TODO: sum order for reasons that are now obsolete (had to with Elong)
             for p in range(l, self._N):
                 # comparing sum of self.separate_cycle_close_probability(l, _) with self.direct_link_probability(l - 1)
                 k = p - l + 1
                 E_k_p = self.Ek_N(k, p + 1)
-
-                # For numerical stability. See SI of arXiv:1905.0905
-                if p == l:
-                     Elong = 0.5 * (E_k_p + RV[l + 1])
 
                 prefactor = (self._factorial(p) * self._factorial(self._N - (p + 1))) \
                             / (self._factorial(l) * self._factorial(self._N - l))
