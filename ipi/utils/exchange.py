@@ -92,9 +92,6 @@ class ExchangePotential(dobject):
         Evaluated using recursion relation from arXiv:1905.090.
         """
         F = self.evaluate_dVB_from_VB()
-        # for ind, l in enumerate(self.bosons):
-        #     for j in range(self._P):
-        #         print("force", l, j, F[j, 3 * l: 3 * (l + 1)])
 
         return [self._V[-1], F]
 
@@ -132,7 +129,6 @@ class ExchangePotential(dobject):
                                        * (-1.0) * self.Evaluate_dEkn_on_atom_full_ring(l, j)
 
                 F[j, 3 * l: 3 * (l + 1)] = total_force
-                # F[j, 3 * l: 3 * (l + 1)] = self.Evaluate_dVB(ind, j)
 
         return F
 
@@ -186,42 +182,6 @@ class ExchangePotential(dobject):
                                                  + close_chain_to_added_atom)
 
         return res
-
-
-    def Evaluate_EkN(self, N, k):
-        """
-        Returns E_N^{(k)} as defined in Equation 5 of arXiv:1905.09053.
-        That is, the energy of k particles R_{N-k+1},...,R_N, connected sequentially into a ring polymer.
-        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
-        """
-        # TODO: depracated by Evaluate_E_Ns
-        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-
-        omegaP_sq = self.omegan2
-
-        q = np.zeros((P, 3 * self._N), float)
-        qall = dstrip(self.beads.q).copy()
-
-        # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
-        for ind, boson in enumerate(self.bosons):
-            q[:, 3 * ind : (3 * ind + 3)] = qall[:, 3 * boson : (3 * boson + 3)]
-
-        sumE = 0.0
-        # Here indices go from 0 to N-1 and P-1, respectively. In paper they start from 1.
-        for l in range(N - k, N):
-            for j in range(P):
-                # q[j,:] stores 3*natoms xyz coordinates of all atoms.
-                # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-                r = q[j, 3 * l : 3 * (l + 1)]
-
-                next_atom_ind, next_bead_ind = self.next_bead_k_ring(l, j, k, N)
-
-                r_next = q[next_bead_ind, 3 * next_atom_ind : 3 * (next_atom_ind + 1)]
-                diff = r_next - r
-
-                sumE = sumE + np.dot(diff, diff)
-
-        return 0.5 * m * omegaP_sq * sumE
 
     def next_bead_k_ring(self, atom_index, bead_index, k, N):
         """
@@ -342,72 +302,6 @@ class ExchangePotential(dobject):
 
         return V
 
-    def Evaluate_VB_s(self, start_index):
-        # TODO: depracated
-        """
-        Evaluate VB^m_s, m = {s,...,N}. VB_{s-1} = 0.0 by definition.
-        Evaluation of each VB^m_s is done using an adaptation of the standard formula.
-        """
-        s = start_index + 1 # TODO: choose consistent indices...
-        V = np.zeros(self._N + 1, float)
-
-        for m in range(start_index + 1, self._N + 1):
-            sig = 0.0
-            # Reversed sum order to be able to use energy of longest ring polymer in Elong
-            for k in range(m - start_index, 0, -1):
-                E_k_N = self.Ek_N(k, m)
-
-                # This is required for numerical stability. See SI of arXiv:1905.0905
-                if k == m - start_index:
-                    Elong = 0.5 * (E_k_N + V[m - 1])
-
-                prefactor = self._factorial(m - 1) * self._factorial(m- k- s + 1) / \
-                            (self._factorial(m - s + 1) * self._factorial(m - k))
-                sig += prefactor * np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
-
-            assert sig != 0.0
-            V[m] = Elong - np.log(sig) / self._betaP
-
-        return V
-
-
-    def Evaluate_dVB(self, l, j):
-        """
-        Evaluates dVB_m, m = {0,...,N} for bead #(j+1) of atom #(l+1). dVB_0 = 0.0 by definition.
-        Evalaution of dVB_m for endpoint beads is based on Equation 2 of SI to arXiv:1905.09053.
-        Returns -dVB_N, the force acting on bead #(j+1) of atom #(l+1).
-        """
-        dV = np.zeros((self._N + 1, 3), float)
-
-        # Reversed sum order to agree with Evaluate_VB() above
-        for m in range(1, self._N + 1):
-            sig = 0
-            if l + 1 > m:  # l goes from 0 to N-1 so check for l+1
-                pass  # dV[m,:] is initialized to zero vector already
-            else:
-                for k in range(m, 0, -1):
-                    if (
-                        l + 1 >= m - k + 1 and l + 1 <= m
-                    ):  # l goes from 0 to N-1 so check for l+1
-                        dE_k_N = self.Evaluate_dEkn_on_atom(l, j, m, k)
-                    else:
-                        dE_k_N = np.zeros(3, float)
-                    sig += (dE_k_N + dV[m - k, :]) * np.exp(
-                        - self._betaP * (self.Ek_N(k, m) + self._V[m - k])
-                    )
-
-                dV[m, :] = sig / (m * np.exp(- self._betaP * self._V[m]))
-
-        return -1.0 * dV[self._N, :]
-
-    def Evaluate_V_backward(self):
-        # TODO: depracated
-        res = np.zeros(self._N + 1)
-        for i in range(self._N + 1):
-            res[i] = self.Evaluate_VB_s(i)[-1]
-        # holds approximately: assert res[0] == self._V[-1]
-        return res
-
     def Evaluate_V_backward_from_V_forward(self):
         """
         Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
@@ -441,7 +335,7 @@ class ExchangePotential(dobject):
         RV[0] = self._V[-1]
 
         return RV
-
+    
 
 class FactorialMemoization(object):
     def __init__(self):
