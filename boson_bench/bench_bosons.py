@@ -4,7 +4,7 @@ import logging
 import subprocess
 import re
 # import typing
-# import statistics
+import statistics
 # import matplotlib.pyplot as plt
 import random # TODO: boo!
 import numpy as np
@@ -103,9 +103,6 @@ def flatten(list_of_lists):
 
 def stringify_elementwise(lst):
     return [str(x) for x in lst]
-
-def mean(lst):
-    return sum(lst) / len(lst)
 
 def time_ipi(input_filename):
     # Run i-pi
@@ -218,7 +215,9 @@ def bench_bosons_single(nbosons, boson_positions):
 
     config = ipi_config(boson_positions_config, boson_masses, boson_labels, bosons_list)
     logger.debug("ipi config: %s" % config)
-    return bench_ipi(config)
+    measured_time = bench_ipi(config)
+    logger.info("time measurement. nbosons: %d; time: %f" % (nbosons, measured_time))
+    return measured_time
 
 def random_position():
     RANDOM_RANGE_LOWER = -100
@@ -234,6 +233,7 @@ def bench_bosons(nbosons):
     boson_positions = random_boson_positions(nbosons)
 
     time_measurements = [bench_bosons_single(nbosons, boson_positions) for _ in range(0, NUM_REPETITIONS)]
+    logger.info("standard deviation. nbosons: %d; time: %f" % (nbosons, statistics.stdev(time_measurements)))
     return statistics.mean(time_measurements)
 
 def boson_scalability(boson_numbers):
@@ -247,22 +247,23 @@ def boson_scalability(boson_numbers):
             w.writerow({"nbosons": nbosons, "time": time})
             csv_log.flush()
 
+def analyze_scalability_csv():
+    data = np.genfromtxt(BOSON_SCALING_CSV_OUTPUT_PATH, delimiter=",", skip_header=True)
+    data_log = np.log(data)
+    slope, intercept, r, p, std_err = stats.linregress(data_log)
+    print(slope, intercept, r, p)
 
 def main():
     set_logger()
 
     MIN_N = 1
-    MAX_N = 1
+    MAX_N = 2
     INCREMENT = 4
 
-    boson_numbers = list(range(MIN_N, MAX_N + 1, INCREMENT))
-
-    # data = [50.40257749557495,59.794443941116334,72.87862811088561,93.42628455162048,109.0871886253357,126.66572160720825,146.1177580356598,159.70166630744933]
-    # data_log = [math.log(x) for x in data]
-    # slope, intercept, r, p, std_err = stats.linregress([math.log(x) for x in range(1, MAX_N + 1)], data)
-    # print(slope, intercept, r, p)
-
+    # analyze_scalability_csv()
     # assert False
+
+    boson_numbers = list(range(MIN_N, MAX_N + 1, INCREMENT))
 
     boson_scalability(boson_numbers)
 
