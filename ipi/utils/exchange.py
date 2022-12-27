@@ -231,6 +231,11 @@ class ExchangePotential(dobject):
 
         save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
+        intraparticle_spring_energies = np.zeros(self._N)
+        for l in range(0, self._N):
+            intraparticle_spring_energies[l] = sum(r_diff_squared_within_ring(l, j)
+                                                   for j in range(self._P - 1))
+
         count = 0
         for m in range(1, self._N + 1):
             Emks = np.zeros(m + 1, float)
@@ -238,7 +243,7 @@ class ExchangePotential(dobject):
             for k in range(0, m):
                 added_atom_index = m - k - 1
                 # TODO: vectorize
-                added_atom_potential = sum(r_diff_squared_within_ring(added_atom_index, j) for j in range(self._P - 1))
+                added_atom_potential = intraparticle_spring_energies[added_atom_index]
                 close_chain_to_added_atom = r_diff_squared(added_atom_index, 0, m - 1, self._P - 1)
                 if k > 0:
                     connect_added_atom_to_rest = r_diff_squared(added_atom_index, self._P - 1, added_atom_index + 1, 0)
