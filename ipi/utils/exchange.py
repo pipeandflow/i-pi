@@ -202,7 +202,7 @@ class ExchangePotential(dobject):
         end_of_m = m * (m + 1) // 2
         return self._Ek_N[end_of_m - k]
 
-    def all_intraparticle_spring_energies(self, q):
+    def all_intra_particle_spring_energies(self, q):
         diff_between_beads = np.diff(q, axis=0) ** 2
         intraparticle_spring_energies_per_coordinate = np.sum(diff_between_beads, axis=0)
         return np.sum(intraparticle_spring_energies_per_coordinate.reshape(-1, 3), axis=1)
@@ -218,6 +218,8 @@ class ExchangePotential(dobject):
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
         for ind, boson in enumerate(self.bosons):
             q[:, 3 * ind: (3 * ind + 3)] = qall[:, 3 * boson: (3 * boson + 3)]
+
+        qshaped = q.reshape((self._P, self._N, 3))
 
         # q[j,:] stores 3*natoms xyz coordinates of all atoms.
         # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
@@ -236,7 +238,10 @@ class ExchangePotential(dobject):
 
         save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
-        intraparticle_spring_energies = self.all_intraparticle_spring_energies(q)
+        intra_spring_energies = self.all_intra_particle_spring_energies(q)
+
+        diff_first_last_bead_array = (qshaped[0, :, np.newaxis, :] - qshaped[self._P - 1, np.newaxis, :, :]) ** 2
+        inter_particle_first_last_bead_spring_energies = np.sum(diff_first_last_bead_array, axis=-1)
 
         count = 0
         for m in range(1, self._N + 1):
@@ -244,11 +249,11 @@ class ExchangePotential(dobject):
 
             for k in range(0, m):
                 added_atom_index = m - k - 1
-                added_atom_potential = intraparticle_spring_energies[added_atom_index]
-                close_chain_to_added_atom = r_diff_squared(added_atom_index, 0, m - 1, self._P - 1)
+                added_atom_potential = intra_spring_energies[added_atom_index]
+                close_chain_to_added_atom = inter_particle_first_last_bead_spring_energies[added_atom_index, m - 1]
                 if k > 0:
                     connect_added_atom_to_rest = r_diff_squared(added_atom_index, self._P - 1, added_atom_index + 1, 0)
-                    break_existing_ring = r_diff_squared(added_atom_index + 1, 0, m - 1, self._P - 1)
+                    break_existing_ring = inter_particle_first_last_bead_spring_energies[added_atom_index + 1, m - 1]
                 else:
                     connect_added_atom_to_rest = 0
                     break_existing_ring = 0
