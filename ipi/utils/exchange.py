@@ -26,6 +26,14 @@ class ExchangePotential(dobject):
 
         self._q = self._init_bead_position_array(dstrip(self.beads.q))
 
+        qshaped = self._q.reshape((self._P, self._N, 3))
+        # self._bead_diff_intra[j] = ((r^{j+1}_0 - r^{j}_0)^2, ..., (r^{j+1}_{N-1} - r^{j}_{N-1})^2
+        self._bead_diff_intra = np.sum(np.diff(qshaped, axis=0) ** 2, axis=-1)
+        # self._bead_diff_inter_first_last_bead[l][m] = (r^0_{l} - r^{P-1}_{m})^2
+        self._bead_diff_inter_first_last_bead = np.sum((qshaped[0, :, np.newaxis, :] -
+                                                        qshaped[self._P - 1, np.newaxis, :, :]) ** 2,
+                                                       axis=-1)
+
         self._Ek_N = self.Evaluate_Ek_N()
         self._V = self.Evaluate_VB()
 
@@ -203,10 +211,6 @@ class ExchangePotential(dobject):
         end_of_m = m * (m + 1) // 2
         return self._Ek_N[end_of_m - k]
 
-    def all_intra_particle_spring_energies(self, qshaped):
-        diff_between_beads = np.diff(qshaped, axis=0) ** 2
-        return np.sum(diff_between_beads, axis=(0, -1))
-
     def Evaluate_Ek_N(self):
         mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
 
@@ -214,9 +218,8 @@ class ExchangePotential(dobject):
 
         save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
-        qshaped = self._q.reshape((self._P, self._N, 3))
-        intra_spring_energies = self.all_intra_particle_spring_energies(qshaped)
-        spring_energy_first_last_bead_array = self._inter_particle_spring_energies(qshaped)
+        intra_spring_energies = np.sum(self._bead_diff_intra, axis=0)
+        spring_energy_first_last_bead_array = self._bead_diff_inter_first_last_bead
 
         count = 0
         for m in range(1, self._N + 1):
@@ -245,11 +248,6 @@ class ExchangePotential(dobject):
                 count += 1
 
         return save_Ek_N
-
-    def _inter_particle_spring_energies(self, qshaped):
-        diff_first_last_bead_array = (qshaped[0, :, np.newaxis, :] - qshaped[self._P - 1, np.newaxis, :, :]) ** 2
-        spring_energy_first_last_bead_array = np.sum(diff_first_last_bead_array, axis=-1)
-        return spring_energy_first_last_bead_array
 
     def Evaluate_VB(self):
         """
