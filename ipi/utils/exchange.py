@@ -26,6 +26,8 @@ class ExchangePotential(dobject):
         self._P = nm.nbeads
         self._betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
 
+        self._q = self._init_bead_position_array(dstrip(self.beads.q))
+
         self._Ek_N = self.Evaluate_Ek_N()
         self._V = self.Evaluate_VB()
 
@@ -33,6 +35,19 @@ class ExchangePotential(dobject):
 
     def _factorial(self, n):
         return self._factorial_cache.factorial(n)
+
+    def _init_bead_position_array(self, qall):
+        qall = dstrip(self.beads.q)
+
+        q = np.zeros((self._P, 3 * self._N), float)
+        # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
+        # q[j,:] stores 3*natoms xyz coordinates of all atoms.
+        # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
+        for ind, boson in enumerate(self.bosons):
+            q[:, 3 * ind: (3 * ind + 3)] = qall[:, 3 * boson: (3 * boson + 3)]
+
+        return q
+
 
     def V_forward(self, l):
         """
@@ -153,16 +168,7 @@ class ExchangePotential(dobject):
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
         omegaP_sq = self.omegan2
 
-        q = np.zeros((self._P, 3 * self._N), float)
-        qall = dstrip(self.beads.q).copy()
-
-        # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
-        for ind, boson in enumerate(self.bosons):
-            q[:, 3 * ind : (3 * ind + 3)] = qall[:, 3 * boson : (3 * boson + 3)]
-
-        # q[j,:] stores 3*natoms xyz coordinates of all atoms.
-        # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-        r = q[j, 3 * l : 3 * (l + 1)]
+        r = self._q[j, 3 * l : 3 * (l + 1)]
         next_bead_ind = j + 1
         next_atom_ind = 3 * l
         prev_bead_ind = j - 1
@@ -186,8 +192,8 @@ class ExchangePotential(dobject):
                 # If on the first bead of N-k atom, r_l_j-1 is the last bead of last atom
                 prev_atom_ind = 3 * (N - 1)
 
-        r_next = q[next_bead_ind, next_atom_ind : (next_atom_ind + 3)]
-        r_prev = q[prev_bead_ind, prev_atom_ind : (prev_atom_ind + 3)]
+        r_next = self._q[next_bead_ind, next_atom_ind : (next_atom_ind + 3)]
+        r_prev = self._q[prev_bead_ind, prev_atom_ind : (prev_atom_ind + 3)]
         diff = 2 * r - r_next - r_prev
 
         return m * omegaP_sq * diff
@@ -212,23 +218,11 @@ class ExchangePotential(dobject):
 
         omegaP_sq = self.omegan2
 
-        q = np.zeros((self._P, 3 * self._N), float)
-        qall = dstrip(self.beads.q)
-
-        # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
-        # q[j,:] stores 3*natoms xyz coordinates of all atoms.
-        # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-        for ind, boson in enumerate(self.bosons):
-            q[:, 3 * ind: (3 * ind + 3)] = qall[:, 3 * boson: (3 * boson + 3)]
-
-        qshaped = q.reshape((self._P, self._N, 3))
-
         save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
-        intra_spring_energies = self.all_intra_particle_spring_energies(q)
-
-        diff_first_last_bead_array = (qshaped[0, :, np.newaxis, :] - qshaped[self._P - 1, np.newaxis, :, :]) ** 2
-        inter_particle_first_last_bead_spring_energies = np.sum(diff_first_last_bead_array, axis=-1)
+        intra_spring_energies = self.all_intra_particle_spring_energies(self._q)
+        qshaped = self._q.reshape((self._P, self._N, 3))
+        spring_energy_first_last_bead_array = self._inter_particle_spring_energies(qshaped)
 
         count = 0
         for m in range(1, self._N + 1):
@@ -237,11 +231,11 @@ class ExchangePotential(dobject):
             for k in range(0, m):
                 added_atom_index = m - k - 1
                 added_atom_potential = intra_spring_energies[added_atom_index]
-                close_chain_to_added_atom = inter_particle_first_last_bead_spring_energies[added_atom_index, m - 1]
+                close_chain_to_added_atom = spring_energy_first_last_bead_array[added_atom_index, m - 1]
                 if k > 0:
-                    connect_added_atom_to_rest = inter_particle_first_last_bead_spring_energies[added_atom_index + 1,
-                                                                                                added_atom_index] #r_diff_squared(added_atom_index, self._P - 1, added_atom_index + 1, 0)
-                    break_existing_ring = inter_particle_first_last_bead_spring_energies[added_atom_index + 1, m - 1]
+                    connect_added_atom_to_rest = spring_energy_first_last_bead_array[added_atom_index + 1,
+                                                                                     added_atom_index]
+                    break_existing_ring = spring_energy_first_last_bead_array[added_atom_index + 1, m - 1]
                 else:
                     connect_added_atom_to_rest = 0
                     break_existing_ring = 0
@@ -257,6 +251,11 @@ class ExchangePotential(dobject):
                 count += 1
 
         return save_Ek_N
+
+    def _inter_particle_spring_energies(self, qshaped):
+        diff_first_last_bead_array = (qshaped[0, :, np.newaxis, :] - qshaped[self._P - 1, np.newaxis, :, :]) ** 2
+        spring_energy_first_last_bead_array = np.sum(diff_first_last_bead_array, axis=-1)
+        return spring_energy_first_last_bead_array
 
     def Evaluate_VB(self):
         """
