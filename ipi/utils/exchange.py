@@ -27,10 +27,10 @@ class ExchangePotential(dobject):
         self._q = self._init_bead_position_array(dstrip(self.beads.q))
 
         qshaped = self._q.reshape((self._P, self._N, 3))
-        # self._bead_diff_intra[j] = ((r^{j+1}_0 - r^{j}_0)^2, ..., (r^{j+1}_{N-1} - r^{j}_{N-1})^2
-        self._bead_diff_intra = np.sum(np.diff(qshaped, axis=0) ** 2, axis=-1)
-        # self._bead_diff_inter_first_last_bead[l][m] = (r^0_{l} - r^{P-1}_{m})^2
-        self._bead_diff_inter_first_last_bead = np.sum((qshaped[0, :, np.newaxis, :] -
+        # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
+        self._bead_diff_intra = np.diff(qshaped, axis=0)
+        # self._bead_dist_inter_first_last_bead[l][m] = (r^0_{l} - r^{P-1}_{m})^2
+        self._bead_dist_inter_first_last_bead = np.sum((qshaped[0, :, np.newaxis, :] -
                                                         qshaped[self._P - 1, np.newaxis, :, :]) ** 2,
                                                        axis=-1)
 
@@ -107,7 +107,7 @@ class ExchangePotential(dobject):
         for ind, l in enumerate(self.bosons):
             # force on intermediate beads is independent of the permutation
             for j in range(1, self._P - 1):
-                F[j, 3 * l: 3 * (l + 1)] = -1.0 * self.Evaluate_dEkn_on_atom_full_ring(l, j)
+                F[j, 3 * l: 3 * (l + 1)] = -1.0 * self._force_on_intermediate_bead(l, j)
 
         for ind, l in enumerate(self.bosons):
             for j in [0, self._P - 1]:
@@ -159,6 +159,12 @@ class ExchangePotential(dobject):
                 # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
                 next_atom_ind = N - k
         return next_atom_ind, next_bead_ind
+
+    def _force_on_intermediate_bead(self, l, j):
+        assert 1 <= j <= self._P - 1
+        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
+        omegaP_sq = self.omegan2
+        return m * omegaP_sq * (-self._bead_diff_intra[j][l] + self._bead_diff_intra[j-1][l])
 
     def Evaluate_dEkn_on_atom(self, l, j, N, k):
         """
@@ -218,8 +224,8 @@ class ExchangePotential(dobject):
 
         save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
-        intra_spring_energies = np.sum(self._bead_diff_intra, axis=0)
-        spring_energy_first_last_bead_array = self._bead_diff_inter_first_last_bead
+        intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
+        spring_energy_first_last_bead_array = self._bead_dist_inter_first_last_bead
 
         count = 0
         for m in range(1, self._N + 1):
