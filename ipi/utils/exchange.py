@@ -136,28 +136,7 @@ class ExchangePotential(dobject):
                 F[j, 3 * l: 3 * (l + 1)] = total_force
 
         return F
-
-    def next_bead_k_ring(self, atom_index, bead_index, k, N):
-        """
-        The next atom and bead indices in a ring polymer of k beads over particles R_{N-k+1},...,R_N.
-        """
-        l = atom_index
-        j = bead_index
-
-        # Taking care of boundary conditions.
-        # Usually r_l_jp1 is the next bead of same atom.
-        next_bead_ind = j + 1
-        next_atom_ind = l
-        if j == P - 1:
-            # If on the last bead, r_l_jp1 is the first bead of next atom
-            next_bead_ind = 0
-            next_atom_ind = l + 1
-
-            if l == N - 1:
-                # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
-                next_atom_ind = N - k
-        return next_atom_ind, next_bead_ind
-
+    
     def _spring_force_prefix(self):
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
         omegaP_sq = self.omegan2
