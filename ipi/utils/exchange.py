@@ -20,8 +20,6 @@ class ExchangePotential(dobject):
         self.omegan2 = nm.omegan2
         self.ensemble = nm.ensemble
 
-        self._factorial_cache = FactorialMemoization()
-
         self._N = len(self.bosons)
         self._P = nm.nbeads
         self._betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
@@ -32,9 +30,6 @@ class ExchangePotential(dobject):
         self._V = self.Evaluate_VB()
 
         self._V_backward = self.Evaluate_V_backward_from_V_forward()
-
-    def _factorial(self, n):
-        return self._factorial_cache.factorial(n)
 
     def _init_bead_position_array(self, qall):
         qall = dstrip(self.beads.q)
@@ -310,13 +305,3 @@ class ExchangePotential(dobject):
         RV[0] = self._V[-1]
 
         return RV
-    
-
-class FactorialMemoization(object):
-    def __init__(self):
-        self._cache = {}
-
-    def factorial(self, n):
-        if n in self._cache:
-            return self._cache[n]
-        return np.math.factorial(n)
