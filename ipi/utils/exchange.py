@@ -104,8 +104,7 @@ class ExchangePotential(dobject):
         for ind, l in enumerate(self.bosons):
             # force on intermediate beads is independent of the permutation
             for j in range(1, self._P - 1):
-                # TODO: inline -1.0 * ... to force
-                F[j, 3 * l: 3 * (l + 1)] = -1.0 * self._force_on_intermediate_bead(l, j)
+                F[j, 3 * l: 3 * (l + 1)] = self._force_on_intermediate_bead(l, j)
 
         for ind, l in enumerate(self.bosons):
             for j in [0, self._P - 1]:
@@ -117,22 +116,22 @@ class ExchangePotential(dobject):
                         lower = peer_boson
                         higher = l
                         total_force += self.separate_cycle_close_probability(lower, higher) \
-                                       * (-1.0) * self._force_on_last_bead(l, peer_boson)
+                                        * self._force_on_last_bead(l, peer_boson)
 
                     if l != self._N - 1:
                         total_force += self.direct_link_probability(l) \
-                                       * (-1.0) * self._force_on_last_bead(l, l + 1)
+                                        * self._force_on_last_bead(l, l + 1)
 
                 if j == 0:
                     for peer_boson in range(l, self._N):
                         lower = l
                         higher = peer_boson
                         total_force += self.separate_cycle_close_probability(lower, higher) \
-                                       * (-1.0) * self._force_on_first_bead(l, peer_boson)
+                                        * self._force_on_first_bead(l, peer_boson)
 
                     if l != 0:
                         total_force += self.direct_link_probability(l - 1) \
-                                       * (-1.0) * self._force_on_first_bead(l, l - 1)
+                                        * self._force_on_first_bead(l, l - 1)
 
                 F[j, 3 * l: 3 * (l + 1)] = total_force
 
@@ -159,21 +158,21 @@ class ExchangePotential(dobject):
                 next_atom_ind = N - k
         return next_atom_ind, next_bead_ind
 
+    def _spring_force_prefix(self):
+        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
+        omegaP_sq = self.omegan2
+        return (-1.0) * m * omegaP_sq
     def _force_on_intermediate_bead(self, l, j):
         assert 1 <= j <= self._P - 1
-        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-        omegaP_sq = self.omegan2
-        return m * omegaP_sq * (-self._bead_diff_intra[j][l] + self._bead_diff_intra[j-1][l])
+        return self._spring_force_prefix() * (-self._bead_diff_intra[j][l] + self._bead_diff_intra[j-1][l])
 
     def _force_on_first_bead(self, l, prev_l):
-        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-        omegaP_sq = self.omegan2
-        return m * omegaP_sq * (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l][prev_l])
+        return self._spring_force_prefix() * \
+               (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l][prev_l])
 
     def _force_on_last_bead(self, l, next_l):
-        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-        omegaP_sq = self.omegan2
-        return m * omegaP_sq * (-self._bead_diff_inter_first_last_bead[next_l][l] + self._bead_diff_intra[-1][l])
+        return self._spring_force_prefix() * \
+               (-self._bead_diff_inter_first_last_bead[next_l][l] + self._bead_diff_intra[-1][l])
 
     def Ek_N(self, k, m):
         end_of_m = m * (m + 1) // 2
