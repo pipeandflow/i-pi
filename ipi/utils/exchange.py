@@ -216,25 +216,12 @@ class ExchangePotential(dobject):
         qall = dstrip(self.beads.q).copy()
 
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
+        # q[j,:] stores 3*natoms xyz coordinates of all atoms.
+        # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
         for ind, boson in enumerate(self.bosons):
             q[:, 3 * ind: (3 * ind + 3)] = qall[:, 3 * boson: (3 * boson + 3)]
 
         qshaped = q.reshape((self._P, self._N, 3))
-
-        # q[j,:] stores 3*natoms xyz coordinates of all atoms.
-        # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-        # TODO: extract somewhere
-        def r_of(atom_index, bead_index):
-            return q[bead_index, 3 * atom_index: 3 * (atom_index + 1)]
-
-        def r_diff_squared(atom1, bead1, atom2, bead2):
-            diff = r_of(atom2, bead2) - r_of(atom1, bead1)
-            return np.dot(diff, diff)
-
-        def r_diff_squared_within_ring(atom_index, bead_index):
-            assert bead_index + 1 < self._P
-            return r_diff_squared(atom_index, bead_index,
-                                  atom_index, bead_index + 1)
 
         save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
@@ -252,7 +239,8 @@ class ExchangePotential(dobject):
                 added_atom_potential = intra_spring_energies[added_atom_index]
                 close_chain_to_added_atom = inter_particle_first_last_bead_spring_energies[added_atom_index, m - 1]
                 if k > 0:
-                    connect_added_atom_to_rest = r_diff_squared(added_atom_index, self._P - 1, added_atom_index + 1, 0)
+                    connect_added_atom_to_rest = inter_particle_first_last_bead_spring_energies[added_atom_index + 1,
+                                                                                                added_atom_index] #r_diff_squared(added_atom_index, self._P - 1, added_atom_index + 1, 0)
                     break_existing_ring = inter_particle_first_last_bead_spring_energies[added_atom_index + 1, m - 1]
                 else:
                     connect_added_atom_to_rest = 0
