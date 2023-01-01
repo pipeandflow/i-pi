@@ -26,11 +26,10 @@ class ExchangePotential(dobject):
 
         self._q = self._init_bead_position_array(dstrip(self.beads.q))
 
-        qshaped = self._q.reshape((self._P, self._N, 3))
         # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
-        self._bead_diff_intra = np.diff(qshaped, axis=0)
+        self._bead_diff_intra = np.diff(self._q, axis=0)
         # self._bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
-        self._bead_diff_inter_first_last_bead = qshaped[0, :, np.newaxis, :] - qshaped[self._P - 1, np.newaxis, :, :]
+        self._bead_diff_inter_first_last_bead = self._q[0, :, np.newaxis, :] - self._q[self._P - 1, np.newaxis, :, :]
 
         self._Ek_N = self.Evaluate_Ek_N()
         self._V = self.Evaluate_VB()
@@ -40,12 +39,12 @@ class ExchangePotential(dobject):
     def _init_bead_position_array(self, qall):
         qall = dstrip(self.beads.q)
 
-        q = np.zeros((self._P, 3 * self._N), float)
+        q = np.zeros((self._P, self._N, 3), float)
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
         # q[j,:] stores 3*natoms xyz coordinates of all atoms.
         # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
         for ind, boson in enumerate(self.bosons):
-            q[:, 3 * ind: (3 * ind + 3)] = qall[:, 3 * boson: (3 * boson + 3)]
+            q[:, ind, :] = qall[:, 3 * boson: (3 * boson + 3)]
 
         return q
 
