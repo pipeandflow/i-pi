@@ -213,7 +213,7 @@ class ExchangePotential(dobject):
         omegaP_sq = self.omegan2
 
         q = np.zeros((self._P, 3 * self._N), float)
-        qall = dstrip(self.beads.q).copy()
+        qall = dstrip(self.beads.q)
 
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
         # q[j,:] stores 3*natoms xyz coordinates of all atoms.
