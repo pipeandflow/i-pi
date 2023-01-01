@@ -202,6 +202,11 @@ class ExchangePotential(dobject):
         end_of_m = m * (m + 1) // 2
         return self._Ek_N[end_of_m - k]
 
+    def all_intraparticle_spring_energies(self, q):
+        diff_between_beads = np.diff(q, axis=0) ** 2
+        intraparticle_spring_energies_per_coordinate = np.sum(diff_between_beads, axis=0)
+        return np.sum(intraparticle_spring_energies_per_coordinate.reshape(-1, 3), axis=1)
+
     def Evaluate_Ek_N(self):
         mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
 
@@ -231,10 +236,7 @@ class ExchangePotential(dobject):
 
         save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
 
-        intraparticle_spring_energies = np.zeros(self._N)
-        for l in range(0, self._N):
-            intraparticle_spring_energies[l] = sum(r_diff_squared_within_ring(l, j)
-                                                   for j in range(self._P - 1))
+        intraparticle_spring_energies = self.all_intraparticle_spring_energies(q)
 
         count = 0
         for m in range(1, self._N + 1):
@@ -242,7 +244,6 @@ class ExchangePotential(dobject):
 
             for k in range(0, m):
                 added_atom_index = m - k - 1
-                # TODO: vectorize
                 added_atom_potential = intraparticle_spring_energies[added_atom_index]
                 close_chain_to_added_atom = r_diff_squared(added_atom_index, 0, m - 1, self._P - 1)
                 if k > 0:
