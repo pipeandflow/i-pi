@@ -100,11 +100,12 @@ class ExchangePotential(dobject):
         return [self._V[-1], F]
 
     def evaluate_dVB_from_VB(self):
-        F = np.zeros((self._P, 3 * self.natoms), float)
-        for ind, l in enumerate(self.bosons):
-            # force on intermediate beads is independent of the permutation
-            for j in range(1, self._P - 1):
-                F[j, 3 * l: 3 * (l + 1)] = self._force_on_intermediate_bead(l, j)
+        F = np.zeros((self._P, self.natoms, 3), float)
+
+        # for 1 <= j <= self._P - 1, 0 <= l < self._N:
+        # F[j, l, :] = self._spring_force_prefix() * (-self._bead_diff_intra[j][l] + self._bead_diff_intra[j - 1][l])
+        F[1:-1, :, :] = self._spring_force_prefix() * (-self._bead_diff_intra[1:][:] +
+                                                       np.roll(self._bead_diff_intra, axis=0, shift=1)[1:][:])
 
         for ind, l in enumerate(self.bosons):
             for j in [0, self._P - 1]:
@@ -133,17 +134,14 @@ class ExchangePotential(dobject):
                         total_force += self.direct_link_probability(l - 1) \
                                         * self._force_on_first_bead(l, l - 1)
 
-                F[j, 3 * l: 3 * (l + 1)] = total_force
+                F[j, l, :] = total_force
 
-        return F
+        return F.reshape((self._P, 3 * self.natoms))
     
     def _spring_force_prefix(self):
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
         omegaP_sq = self.omegan2
         return (-1.0) * m * omegaP_sq
-    def _force_on_intermediate_bead(self, l, j):
-        assert 1 <= j <= self._P - 1
-        return self._spring_force_prefix() * (-self._bead_diff_intra[j][l] + self._bead_diff_intra[j-1][l])
 
     def _force_on_first_bead(self, l, prev_l):
         return self._spring_force_prefix() * \
