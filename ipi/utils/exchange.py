@@ -102,39 +102,38 @@ class ExchangePotential(dobject):
     def evaluate_dVB_from_VB(self):
         F = np.zeros((self._P, self.natoms, 3), float)
 
-        # for 1 <= j <= self._P - 1, 0 <= l < self._N:
+        # force on intermediate beads
+
+        # for 1 <= j < self._P - 1, 0 <= l < self._N:
         # F[j, l, :] = self._spring_force_prefix() * (-self._bead_diff_intra[j][l] + self._bead_diff_intra[j - 1][l])
-        F[1:-1, :, :] = self._spring_force_prefix() * (-self._bead_diff_intra[1:][:] +
-                                                       np.roll(self._bead_diff_intra, axis=0, shift=1)[1:][:])
+        F[1:-1, :, :] = self._spring_force_prefix() * (-self._bead_diff_intra[1:, :] +
+                                                       np.roll(self._bead_diff_intra, axis=0, shift=1)[1:, :])
 
-        for ind, l in enumerate(self.bosons):
-            for j in [0, self._P - 1]:
-                total_force = 0
+        # force on endpoint beads
 
-                if j == self._P - 1:
-                    # TODO: vectorize sum?
-                    for peer_boson in range(0, l + 1): # l + 1 to include cycle of l with itself
-                        lower = peer_boson
-                        higher = l
-                        total_force += self.separate_cycle_close_probability(lower, higher) \
-                                        * self._force_on_last_bead(l, peer_boson)
+        connection_probs = np.zeros((self._N, self._N))
+        # TODO: vectorize
+        for u in range(0, self._N):
+            for l in range(u, self._N):
+                connection_probs[l][u] = self.separate_cycle_close_probability(u, l)
+        for l in range(self._N - 1):
+            connection_probs[l][l + 1] = self.direct_link_probability(l)
 
-                    if l != self._N - 1:
-                        total_force += self.direct_link_probability(l) \
-                                        * self._force_on_last_bead(l, l + 1)
+        for l in range(self._N):
+            # on the last bead:
+            # force_from_neighbor[next_l] = self._spring_force_prefix() * \
+            #                        (-self._bead_diff_inter_first_last_bead[next_l][l] + self._bead_diff_intra[-1][l])
+            force_from_neighbors = self._spring_force_prefix() * \
+                                      (-self._bead_diff_inter_first_last_bead[:, l] + self._bead_diff_intra[-1][l])
+            F[-1, l, :] = np.dot(connection_probs[l], force_from_neighbors)
 
-                if j == 0:
-                    for peer_boson in range(l, self._N):
-                        lower = l
-                        higher = peer_boson
-                        total_force += self.separate_cycle_close_probability(lower, higher) \
-                                        * self._force_on_first_bead(l, peer_boson)
-
-                    if l != 0:
-                        total_force += self.direct_link_probability(l - 1) \
-                                        * self._force_on_first_bead(l, l - 1)
-
-                F[j, l, :] = total_force
+        for l in range(self._N):
+            # on the first bead:
+            # force_from_neighbor[prev_l] = self._spring_force_prefix() * \
+            #                (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l][prev_l])
+            force_from_neighbors = self._spring_force_prefix() * \
+                                      (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l, :])
+            F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors)
 
         return F.reshape((self._P, 3 * self.natoms))
     
@@ -142,14 +141,6 @@ class ExchangePotential(dobject):
         m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
         omegaP_sq = self.omegan2
         return (-1.0) * m * omegaP_sq
-
-    def _force_on_first_bead(self, l, prev_l):
-        return self._spring_force_prefix() * \
-               (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l][prev_l])
-
-    def _force_on_last_bead(self, l, next_l):
-        return self._spring_force_prefix() * \
-               (-self._bead_diff_inter_first_last_bead[next_l][l] + self._bead_diff_intra[-1][l])
 
     def Ek_N(self, k, m):
         end_of_m = m * (m + 1) // 2
