@@ -11,6 +11,20 @@ from ipi.utils.depend import *
 import numpy as np
 
 
+def kth_diag_indices(a, k):
+    """
+    Indices to access matrix k-diagonals in numpy.
+    https://stackoverflow.com/questions/10925671/numpy-k-th-diagonal-indices
+    """
+    rows, cols = np.diag_indices_from(a)
+    if k < 0:
+        return rows[-k:], cols[:k]
+    elif k > 0:
+        return rows[:-k], cols[k:]
+    else:
+        return rows, cols
+
+
 class ExchangePotential(dobject):
     def __init__(self, nm):
         assert len(nm.bosons) != 0
@@ -67,20 +81,7 @@ class ExchangePotential(dobject):
         V_(1)^(N), which is V_forward(self._N - 1) == self.V_backward(0)
         """
         return self._V[self._N]
-
-    # def full_cycle_probability(self):
-    #     return np.exp(- self._betaP * self.Ek_N(self._N, self._N)) / (self._N * self.V_forward(self._N))
-
-    def direct_link_probability(self, l):
-        """
-        The probability that l,l+1 (l=0...N-1) are joined in the same ring.
-        Computed by 1 - the probability that a cycle "cuts" exactly between l,l+1.
-        """
-        assert 0 <= l < self._N - 1
-        prob = 1 - (np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
-                                            self.V_all())))
-        return prob
-
+    
     def separate_cycle_close_probability(self, l1, l2):
         assert l1 <= l2
 
@@ -116,8 +117,14 @@ class ExchangePotential(dobject):
         for u in range(0, self._N):
             for l in range(u, self._N):
                 connection_probs[l][u] = self.separate_cycle_close_probability(u, l)
-        for l in range(self._N - 1):
-            connection_probs[l][l + 1] = self.direct_link_probability(l)
+
+        # direct link probabilities:
+        # for 0 <= l < self._N - 1:
+        # connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
+        #                                     self.V_all())))
+        superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
+        connection_probs[superdiagonal_indices] = 1 - (np.exp(- self._betaP *
+                                                        (self._V[1:-1] + self._V_backward[1:-1] - self.V_all())))
 
         # on the last bead:
         #
