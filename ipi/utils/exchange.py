@@ -82,15 +82,6 @@ class ExchangePotential(dobject):
         """
         return self._V[self._N]
 
-    def separate_cycle_close_probability(self, l1, l2):
-        assert l1 <= l2
-
-        prob = 1 / (l2 + 1) * \
-               np.exp(- self._betaP *
-                       (self.V_forward(l1 - 1) + self.Ek_N(l2 + 1 - l1, l2 + 1) + self.V_backward(l2 + 1)
-                        - self.V_all()))
-        return prob
-
     def get_vspring_and_fspring(self):
         """
         Calculates spring forces and potential for bosons.
