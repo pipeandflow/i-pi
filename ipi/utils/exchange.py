@@ -121,17 +121,17 @@ class ExchangePotential(dobject):
         #                        (self.V_forward(u - 1) + self.Ek_N(l + 1 - u, l + 1) + self.V_backward(l + 1)
         #                         - self.V_all()))
         tril_indices = np.tril_indices(self._N, k=0)
-        connection_probs[tril_indices] = ( # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
-                                            np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis] *
-                                        np.exp(- self._betaP * (
-                                            # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
-                                            self._V[np.newaxis, :-1]
-                                           + np.asarray([(self.Ek_N(l + 1 - u, l + 1) if l >= u else 0) for l in range(self._N) for u in range(self._N)]).reshape((self._N, self._N))
-                                            # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
-                                            + self._V_backward[1:, np.newaxis]
-                                           - self.V_all()
-                                       )))[tril_indices]
-        
+        connection_probs[tril_indices] = (  # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
+                            np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis] *
+                            np.exp(- self._betaP * (
+                                # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
+                                self._V[np.newaxis, :-1]
+                                + np.asarray([(self.Ek_N(l + 1 - u, l + 1) if l >= u else 0) for l in range(self._N) for u in range(self._N)]).reshape((self._N, self._N))
+                                # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
+                                + self._V_backward[1:, np.newaxis]
+                                - self.V_all()
+                            )))[tril_indices]
+
         # direct link probabilities:
         # for 0 <= l < self._N - 1:
         # connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
