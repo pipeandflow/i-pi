@@ -112,7 +112,7 @@ class ExchangePotential(dobject):
 
         # force on endpoint beads
         #
-        connection_probs = np.zeros((self._N, self._N))
+        connection_probs = np.zeros((self._N, self._N), float)
         # close cycle probabilities:
         # for u in range(0, self._N):
         #     for l in range(u, self._N):
