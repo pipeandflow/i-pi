@@ -240,29 +240,19 @@ class ExchangePotential(dobject):
         return V
 
     def Evaluate_V_backward_from_V_forward(self):
-        """
-        Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
-        Evaluation of each VB_m is done using Equation 5 of arXiv:1905.0905.
-        Returns all VB_m and all E_m^{(k)} which are required for the forces later.
-        """
         RV = np.zeros(self._N + 1, float)
 
         for l in range(self._N - 1, 0, -1):
-            sig = 0.0
             # For numerical stability. See SI of arXiv:1905.0905
             Elong = min(self.Ek_N(1, l + 1) + RV[l + 1], self.Ek_N(self._N - l, self._N) + RV[self._N])
 
-            # TODO: sum order for reasons that are now obsolete (had to with Elong)
-            for p in range(l, self._N):
-                # comparing sum of self.separate_cycle_close_probability(l, _) with self.direct_link_probability(l - 1)
-                k = p - l + 1
-                E_k_p = self.Ek_N(k, p + 1)
-
-                prefactor = 1 / (p + 1)
-                sig += prefactor * np.exp(- self._betaP * (E_k_p + RV[p + 1]
-                                                           # cancel: + self.V_forward(l - 1) - self.V_forward(l - 1)
-                                                           - Elong))
-
+            # sig = 0.0
+            # for p in range(l, self._N):
+            #     sig += 1 / (p + 1) * np.exp(- self._betaP * (self._Ek_N[l, p] + RV[p + 1]
+            #                                                 - Elong))
+            sig = np.sum(np.reciprocal(np.arange(l + 1.0, self._N + 1)) *
+                         np.exp(- self._betaP * (self._Ek_N[l, l:] + RV[l+1:]
+                                                 - Elong)))
             assert sig != 0.0
             RV[l] = Elong - np.log(sig) / self._betaP
 
