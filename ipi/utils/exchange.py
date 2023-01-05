@@ -223,15 +223,17 @@ class ExchangePotential(dobject):
         V = np.zeros(self._N + 1, float)
 
         for m in range(1, self._N + 1):
-            sig = 0.0
             # This is required for numerical stability. See SI of arXiv:1905.0905
             Elong = min(self.Ek_N(m, 1) + V[m-1], self.Ek_N(m, m) + V[0])
 
-            # TODO: Reversed sum order for reasons that are now obsolete (had to do with Elong)
-            for k in range(m, 0, -1):
-                E_k_N = self.Ek_N(k, m)
-                sig = sig + np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
-
+            # sig = 0.0
+            # for u in range(m):
+            #   sig += np.exp(- self._betaP *
+            #                (V[u] + self._Ek_N[u, m - 1] - Elong) # V until u-1, then cycle from u to m
+            #                 )
+            sig = np.sum(np.exp(- self._betaP *
+                                (V[:m] + self._Ek_N[:m, m - 1] - Elong)
+                                ))
             assert sig != 0.0
             V[m] = Elong - np.log(sig / m) / self._betaP
 
