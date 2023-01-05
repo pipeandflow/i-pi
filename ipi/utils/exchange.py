@@ -186,46 +186,41 @@ class ExchangePotential(dobject):
         return (-1.0) * m * omegaP_sq
 
     def Ek_N(self, k, m):
-        end_of_m = m * (m + 1) // 2
-        return self._Ek_N[end_of_m - k]
+        if k > m:
+            return 0
+        upper = m - 1
+        lower = upper - k + 1
+        assert 0 <= upper < self._N, upper
+        assert 0 <= lower < self._N, lower
+        return self._Ek_N[lower][upper]
 
     def Evaluate_Ek_N(self):
         mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
 
         omegaP_sq = self.omegan2
+        coefficient = 0.5 * mass * omegaP_sq
 
-        save_Ek_N = np.zeros(self._N * (self._N + 1) // 2, float)
+        Emks = np.zeros((self._N, self._N), float)
 
         intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
         spring_energy_first_last_bead_array = np.sum(self._bead_diff_inter_first_last_bead ** 2, axis=-1)
 
-        count = 0
-        for m in range(1, self._N + 1):
-            Emks = np.zeros(m + 1, float)
+        for m in range(self._N):
+            Emks[m][m] = coefficient * (intra_spring_energies[m] + spring_energy_first_last_bead_array[m, m])
 
-            for k in range(0, m):
-                added_atom_index = m - k - 1
+            for k in range(1, m + 1):
+                added_atom_index = m - k
                 added_atom_potential = intra_spring_energies[added_atom_index]
-                close_chain_to_added_atom = spring_energy_first_last_bead_array[added_atom_index, m - 1]
-                if k > 0:
-                    connect_added_atom_to_rest = spring_energy_first_last_bead_array[added_atom_index + 1,
-                                                                                     added_atom_index]
-                    break_existing_ring = spring_energy_first_last_bead_array[added_atom_index + 1, m - 1]
-                else:
-                    connect_added_atom_to_rest = 0
-                    break_existing_ring = 0
+                close_chain_to_added_atom = spring_energy_first_last_bead_array[added_atom_index, m]
+                connect_added_atom_to_rest = spring_energy_first_last_bead_array[added_atom_index + 1,
+                                                                                 added_atom_index]
+                break_existing_ring = spring_energy_first_last_bead_array[added_atom_index + 1, m]
 
-                coefficient = 0.5 * mass * omegaP_sq
-                Emks[k + 1] = Emks[k] + coefficient * (- break_existing_ring
+                Emks[m - k][m] = Emks[m - k + 1][m] + coefficient * (- break_existing_ring
                                                        + added_atom_potential + connect_added_atom_to_rest
                                                        + close_chain_to_added_atom)
 
-            # Reversed order similar to Evaluate_VB and Evaluate_dVB
-            for k in range(m, 0, -1):
-                save_Ek_N[count] = Emks[k]
-                count += 1
-
-        return save_Ek_N
+        return Emks
 
     def Evaluate_VB(self):
         """
@@ -240,7 +235,7 @@ class ExchangePotential(dobject):
             # This is required for numerical stability. See SI of arXiv:1905.0905
             Elong = min(self.Ek_N(m, 1) + V[m-1], self.Ek_N(m, m) + V[0])
 
-            # TODO: Reversed sum order for reasons that are not obsolete (had to do with Elong)
+            # TODO: Reversed sum order for reasons that are now obsolete (had to do with Elong)
             for k in range(m, 0, -1):
                 E_k_N = self.Ek_N(k, m)
                 sig = sig + np.exp(- self._betaP * (E_k_N + V[m - k] - Elong))
