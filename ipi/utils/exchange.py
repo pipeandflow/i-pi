@@ -191,27 +191,30 @@ class ExchangePotential(dobject):
         mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
 
         omegaP_sq = self.omegan2
-        coefficient = 0.5 * mass * omegaP_sq
+        coefficient = 0.5 * mass * omegaP_sq # TODO: code duplication
 
         Emks = np.zeros((self._N, self._N), float)
 
         intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
         spring_energy_first_last_bead_array = np.sum(self._bead_diff_inter_first_last_bead ** 2, axis=-1)
 
-        for m in range(self._N):
-            Emks[m][m] = coefficient * (intra_spring_energies[m] + spring_energy_first_last_bead_array[m, m])
+        # for m in range(self._N):
+        #     Emks[m][m] = coefficient * (intra_spring_energies[m] + spring_energy_first_last_bead_array[m, m])
+        Emks[np.diag_indices_from(Emks)] = coefficient * (intra_spring_energies +
+                                                          np.diagonal(spring_energy_first_last_bead_array))
 
-            for k in range(1, m + 1):
-                added_atom_index = m - k
-                added_atom_potential = intra_spring_energies[added_atom_index]
-                close_chain_to_added_atom = spring_energy_first_last_bead_array[added_atom_index, m]
-                connect_added_atom_to_rest = spring_energy_first_last_bead_array[added_atom_index + 1,
-                                                                                 added_atom_index]
-                break_existing_ring = spring_energy_first_last_bead_array[added_atom_index + 1, m]
-
-                Emks[m - k][m] = Emks[m - k + 1][m] + coefficient * (- break_existing_ring
-                                                       + added_atom_potential + connect_added_atom_to_rest
-                                                       + close_chain_to_added_atom)
+        for s in range(self._N - 1 - 1, -1, -1):
+            # for m in range(s + 1, self._N):
+            #     Emks[s][m] = Emks[s + 1][m] + coefficient * (
+            #             - spring_energy_first_last_bead_array[s + 1, m]
+            #             + intra_spring_energies[s]
+            #             + spring_energy_first_last_bead_array[s + 1, s]
+            #             + spring_energy_first_last_bead_array[s, m])
+            Emks[s, (s+1):] = Emks[s + 1, (s+1):] + coefficient * (
+                    - spring_energy_first_last_bead_array[s + 1, (s+1):]
+                    + intra_spring_energies[s]
+                    + spring_energy_first_last_bead_array[s + 1, s]
+                    + spring_energy_first_last_bead_array[s, (s+1):])
 
         return Emks
 
