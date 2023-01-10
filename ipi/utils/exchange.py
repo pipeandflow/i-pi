@@ -112,7 +112,8 @@ class ExchangePotential(dobject):
         #                        (self.V_forward(u - 1) + self.Ek_N(l + 1 - u, l + 1) + self.V_backward(l + 1)
         #                         - self.V_all()))
         tril_indices = np.tril_indices(self._N, k=0)
-        connection_probs[tril_indices] = (  # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
+        connection_probs[tril_indices] = (
+                            # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
                             np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis] *
                             np.exp(- self._betaP * (
                                 # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
