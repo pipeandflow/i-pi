@@ -146,11 +146,11 @@ class ExchangePotential(dobject):
         #                       for next_l in range(self._N))
         #
         # First vectorization:
-        # for 0 <= l < self._N:
-        #   force_from_neighbors[l] = self._spring_force_prefix() * \
-        #                         (-self._bead_diff_inter_first_last_bead[:, l] + self._bead_diff_intra[-1][l])
-        # F[-1, l, :] = np.dot(connection_probs[l], force_from_neighbors)
-        #
+        # for l in range(self._N):
+        #     force_from_neighbors = np.empty((self._N, 3))
+        #     force_from_neighbors[:, :] = self._spring_force_prefix() * \
+        #                         (-self._bead_diff_inter_first_last_bead[:, l] + self._bead_diff_intra[-1, l])
+        #     F[-1, l, :] = np.dot(connection_probs[l][:], force_from_neighbors)
         force_from_neighbors = self._spring_force_prefix() * \
                                (-np.transpose(self._bead_diff_inter_first_last_bead,
                                               axes=(1,0,2))
@@ -169,10 +169,12 @@ class ExchangePotential(dobject):
         #                      for prev_l in range(self._N))
         #
         # First vectorization:
-        # for 0 <= l < self._N:
-        #   force_from_neighbors[l] = self._spring_force_prefix() * \
-        #                          (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l, :])
-        #    F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors[l])
+        #
+        # for l in range(self._N):
+        #     force_from_neighbors = np.empty((self._N, 3))
+        #     force_from_neighbors[:, :] = self._spring_force_prefix() * \
+        #                              (-self._bead_diff_intra[0, l] + self._bead_diff_inter_first_last_bead[l, :])
+        #     F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors)
         #
         force_from_neighbors = self._spring_force_prefix() * \
                                     (self._bead_diff_inter_first_last_bead - self._bead_diff_intra[0, :, np.newaxis])
