@@ -193,8 +193,7 @@ class ExchangePotential(dobject):
         return self._Ek_N[lower][upper]
 
     def Evaluate_Ek_N(self):
-        # using column-major (Fortan order) because uses of the array are mostly within the same column
-        Emks = np.zeros((self._N, self._N), dtype=float, order='F')
+        Emks = np.zeros((self._N, self._N), dtype=float)
 
         intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
         spring_energy_first_last_bead_array = np.sum(self._bead_diff_inter_first_last_bead ** 2, axis=-1)
