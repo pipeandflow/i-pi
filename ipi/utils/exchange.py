@@ -178,6 +178,11 @@ class ExchangePotential(dobject):
         omegaP_sq = self.omegan2
         return (-1.0) * m * omegaP_sq
 
+    def _spring_potential_prefix(self):
+        mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
+        omegaP_sq = self.omegan2
+        return 0.5 * mass * omegaP_sq
+
     def Ek_N(self, k, m):
         if k > m:
             return 0
@@ -188,11 +193,6 @@ class ExchangePotential(dobject):
         return self._Ek_N[lower][upper]
 
     def Evaluate_Ek_N(self):
-        mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-
-        omegaP_sq = self.omegan2
-        coefficient = 0.5 * mass * omegaP_sq # TODO: code duplication
-
         Emks = np.zeros((self._N, self._N), float)
 
         intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
@@ -200,8 +200,8 @@ class ExchangePotential(dobject):
 
         # for m in range(self._N):
         #     Emks[m][m] = coefficient * (intra_spring_energies[m] + spring_energy_first_last_bead_array[m, m])
-        Emks[np.diag_indices_from(Emks)] = coefficient * (intra_spring_energies +
-                                                          np.diagonal(spring_energy_first_last_bead_array))
+        Emks[np.diag_indices_from(Emks)] = self._spring_potential_prefix() * (intra_spring_energies +
+                                                                              np.diagonal(spring_energy_first_last_bead_array))
 
         for s in range(self._N - 1 - 1, -1, -1):
             # for m in range(s + 1, self._N):
@@ -210,11 +210,11 @@ class ExchangePotential(dobject):
             #             + intra_spring_energies[s]
             #             + spring_energy_first_last_bead_array[s + 1, s]
             #             + spring_energy_first_last_bead_array[s, m])
-            Emks[s, (s+1):] = Emks[s + 1, (s+1):] + coefficient * (
-                    - spring_energy_first_last_bead_array[s + 1, (s+1):]
+            Emks[s, (s + 1):] = Emks[s + 1, (s + 1):] + self._spring_potential_prefix() * (
+                    - spring_energy_first_last_bead_array[s + 1, (s + 1):]
                     + intra_spring_energies[s]
                     + spring_energy_first_last_bead_array[s + 1, s]
-                    + spring_energy_first_last_bead_array[s, (s+1):])
+                    + spring_energy_first_last_bead_array[s, (s + 1):])
 
         return Emks
 
