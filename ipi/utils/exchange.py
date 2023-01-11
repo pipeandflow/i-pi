@@ -95,9 +95,11 @@ class ExchangePotential(dobject):
         F = np.zeros((self._P, self.natoms, 3), float)
 
         # force on intermediate beads
-
-        # for 1 <= j < self._P - 1, 0 <= l < self._N:
-        # F[j, l, :] = self._spring_force_prefix() * (-self._bead_diff_intra[j][l] + self._bead_diff_intra[j - 1][l])
+        #
+        # for j in range(1, self._P - 1):
+        #   for l in range(self._N):
+        #         F[j, l, :] = self._spring_force_prefix() * (-self._bead_diff_intra[j][l] +
+        #                                                     self._bead_diff_intra[j - 1][l])
         F[1:-1, :, :] = self._spring_force_prefix() * (-self._bead_diff_intra[1:, :] +
                                                        np.roll(self._bead_diff_intra, axis=0, shift=1)[1:, :])
 
@@ -126,26 +128,29 @@ class ExchangePotential(dobject):
                             )))[tril_indices]
 
         # direct link probabilities:
-        # for 0 <= l < self._N - 1:
-        # connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
-        #                                     self.V_all())))
+        # for l in range(self._N - 1):
+        #     connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
+        #                                         self.V_all())))
         superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
         connection_probs[superdiagonal_indices] = 1 - (np.exp(- self._betaP *
                                                         (self._V[1:-1] + self._V_backward[1:-1] - self.V_all())))
 
         # on the last bead:
         #
-        # for 0 <= l < self._N:
-        #   for 0 <= next_l <= max(l + 1, self._N - 1):
-        #       force_from_neighbor[l][next_l] = self._spring_force_prefix() * \
-        #                         (-self._bead_diff_inter_first_last_bead[next_l][l] + self._bead_diff_intra[-1][l])
-        # F[-1, l, :] = sum_{next_l}{connection_probs[l][next_l] * force_from_neighbors[next_l]}
+        # for l in range(self._N):
+        #     force_from_neighbor = np.empty((self._N, 3))
+        #     for next_l in range(max(l + 1, self._N)):
+        #         force_from_neighbor[next_l, :] = self._spring_force_prefix() * \
+        #                         (-self._bead_diff_inter_first_last_bead[next_l, l] + self._bead_diff_intra[-1, l])
+        #     F[-1, l, :] = sum(connection_probs[l][next_l] * force_from_neighbor[next_l]
+        #                       for next_l in range(self._N))
         #
         # First vectorization:
         # for 0 <= l < self._N:
         #   force_from_neighbors[l] = self._spring_force_prefix() * \
         #                         (-self._bead_diff_inter_first_last_bead[:, l] + self._bead_diff_intra[-1][l])
         # F[-1, l, :] = np.dot(connection_probs[l], force_from_neighbors)
+        #
         force_from_neighbors = self._spring_force_prefix() * \
                                (-np.transpose(self._bead_diff_inter_first_last_bead,
                                               axes=(1,0,2))
@@ -155,17 +160,20 @@ class ExchangePotential(dobject):
 
         # on the first bead:
         #
-        # for 0 <= l < self._N:
-        #   for l - 1 <= prev_l < self._N:
-        #       force_from_neighbors[l][prev_l] = self._spring_force_prefix() * \
-        #                    (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l][prev_l])
-        #    F[0, l, :] = sum_{prev_l} connection_probs[prev_l, l] * force_from_neighbors[l])
+        # for l in range(self._N):
+        #     force_from_neighbor = np.empty((self._N, 3))
+        #     for prev_l in range(l - 1, self._N):
+        #         force_from_neighbor[prev_l, :] = self._spring_force_prefix() * \
+        #                            (-self._bead_diff_intra[0, l] + self._bead_diff_inter_first_last_bead[l, prev_l])
+        #     F[0, l, :] = sum(connection_probs[prev_l][l] * force_from_neighbor[prev_l]
+        #                      for prev_l in range(self._N))
         #
         # First vectorization:
         # for 0 <= l < self._N:
         #   force_from_neighbors[l] = self._spring_force_prefix() * \
         #                          (-self._bead_diff_intra[0][l] + self._bead_diff_inter_first_last_bead[l, :])
         #    F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors[l])
+        #
         force_from_neighbors = self._spring_force_prefix() * \
                                     (self._bead_diff_inter_first_last_bead - self._bead_diff_intra[0, :, np.newaxis])
         # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
