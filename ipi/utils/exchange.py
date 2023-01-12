@@ -45,6 +45,7 @@ class ExchangePotential(dobject):
         # self._bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
         self._bead_diff_inter_first_last_bead = self._q[0, :, np.newaxis, :] - self._q[self._P - 1, np.newaxis, :, :]
 
+        # self._E_from_to[l1, l2] is the spring energy of the cycle on particle indices l1,...,l2
         self._Ek_N = self.Evaluate_Ek_N()
         self._V = self.Evaluate_VB()
 
@@ -192,15 +193,6 @@ class ExchangePotential(dobject):
         mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
         omegaP_sq = self.omegan2
         return 0.5 * mass * omegaP_sq
-
-    def Ek_N(self, k, m):
-        if k > m:
-            return 0
-        upper = m - 1
-        lower = upper - k + 1
-        assert 0 <= upper < self._N, upper
-        assert 0 <= lower < self._N, lower
-        return self._Ek_N[lower][upper]
 
     def Evaluate_Ek_N(self):
         Emks = np.zeros((self._N, self._N), dtype=float)
