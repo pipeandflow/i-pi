@@ -53,7 +53,7 @@ class ExchangePotential(dobject):
     def _init_bead_position_array(self, qall):
         qall = dstrip(self.beads.q)
 
-        q = np.zeros((self._P, self._N, 3), float)
+        q = np.empty((self._P, self._N, 3), float)
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
         # q[j,:] stores 3*natoms xyz coordinates of all atoms.
         # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
