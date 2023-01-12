@@ -46,10 +46,12 @@ class ExchangePotential(dobject):
         self._bead_diff_inter_first_last_bead = self._q[0, :, np.newaxis, :] - self._q[self._P - 1, np.newaxis, :, :]
 
         # self._E_from_to[l1, l2] is the spring energy of the cycle on particle indices l1,...,l2
-        self._Ek_N = self.Evaluate_Ek_N()
-        self._V = self.Evaluate_VB()
+        self._E_from_to = self._evaluate_cycle_energies()
+        # self._V[l] = V^[1,l+1]
+        self._V = self._evaluate_V_forward()
 
-        self._V_backward = self.Evaluate_V_backward_from_V_forward()
+        # self._V_backward[l] = V^[l+1, N]
+        self._V_backward = self._evaluate_V_backward()
 
     def _init_bead_position_array(self, qall):
         qall = dstrip(self.beads.q)
@@ -63,23 +65,9 @@ class ExchangePotential(dobject):
 
         return q
 
-
-    def V_forward(self, l):
-        """
-        V_forward(l) is V[l+1]: log the weight of the representative permutations on particles 0,...,l.
-        """
-        return self._V[l + 1]
-
-    def V_backward(self, s):
-        """
-        V_backward[s] is the same recursive calculation of V with a different initial condition: V(s) = 0.
-        This is log the weight of the representative permutations on particles N-s-1,...,N-1.
-        """
-        return self._V_backward[s]
-
     def V_all(self):
         """
-        V_(1)^(N), which is V_forward(self._N - 1) == self.V_backward(0)
+        The forward/backward potential on all particles: V^[1,N]
         """
         return self._V[self._N]
 
@@ -122,7 +110,7 @@ class ExchangePotential(dobject):
                                 # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
                                 self._V[np.newaxis, :-1]
                                 # + np.asarray([(self.Ek_N(l + 1 - u, l + 1) if l >= u else 0) for l in range(self._N) for u in range(self._N)]).reshape((self._N, self._N))
-                                + self._Ek_N.T
+                                + self._E_from_to.T
                                 # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
                                 + self._V_backward[1:, np.newaxis]
                                 - self.V_all()
@@ -194,7 +182,7 @@ class ExchangePotential(dobject):
         omegaP_sq = self.omegan2
         return 0.5 * mass * omegaP_sq
 
-    def Evaluate_Ek_N(self):
+    def _evaluate_cycle_energies(self):
         Emks = np.zeros((self._N, self._N), dtype=float)
 
         intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
@@ -220,7 +208,7 @@ class ExchangePotential(dobject):
 
         return Emks
 
-    def Evaluate_VB(self):
+    def _evaluate_V_forward(self):
         """
         Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
         Evaluation of each VB_m is done using Equation 5 of arXiv:1905.0905.
@@ -230,7 +218,7 @@ class ExchangePotential(dobject):
 
         for m in range(1, self._N + 1):
             # For numerical stability. See SI of arXiv:1905.0905
-            Elong = min(V[m-1] + self._Ek_N[m-1, m-1], V[0] + self._Ek_N[0, m-1])
+            Elong = min(V[m-1] + self._E_from_to[m - 1, m - 1], V[0] + self._E_from_to[0, m - 1])
 
             # sig = 0.0
             # for u in range(m):
@@ -238,26 +226,26 @@ class ExchangePotential(dobject):
             #                (V[u] + self._Ek_N[u, m - 1] - Elong) # V until u-1, then cycle from u to m
             #                 )
             sig = np.sum(np.exp(- self._betaP *
-                                (V[:m] + self._Ek_N[:m, m - 1] - Elong)
+                                (V[:m] + self._E_from_to[:m, m - 1] - Elong)
                                 ))
             assert sig != 0.0
             V[m] = Elong - np.log(sig / m) / self._betaP
 
         return V
 
-    def Evaluate_V_backward_from_V_forward(self):
+    def _evaluate_V_backward(self):
         RV = np.zeros(self._N + 1, float)
 
         for l in range(self._N - 1, 0, -1):
             # For numerical stability
-            Elong = min(self._Ek_N[1, l] + RV[l + 1], self._Ek_N[l, self._N - 1])
+            Elong = min(self._E_from_to[1, l] + RV[l + 1], self._E_from_to[l, self._N - 1])
 
             # sig = 0.0
             # for p in range(l, self._N):
             #     sig += 1 / (p + 1) * np.exp(- self._betaP * (self._Ek_N[l, p] + RV[p + 1]
             #                                                 - Elong))
             sig = np.sum(np.reciprocal(np.arange(l + 1.0, self._N + 1)) *
-                         np.exp(- self._betaP * (self._Ek_N[l, l:] + RV[l+1:]
+                         np.exp(- self._betaP * (self._E_from_to[l, l:] + RV[l + 1:]
                                                  - Elong)))
             assert sig != 0.0
             RV[l] = Elong - np.log(sig) / self._betaP
