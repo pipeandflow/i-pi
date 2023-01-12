@@ -237,8 +237,8 @@ class ExchangePotential(dobject):
         V = np.zeros(self._N + 1, float)
 
         for m in range(1, self._N + 1):
-            # This is required for numerical stability. See SI of arXiv:1905.0905
-            Elong = min(self.Ek_N(m, 1) + V[m-1], self.Ek_N(m, m) + V[0])
+            # For numerical stability. See SI of arXiv:1905.0905
+            Elong = min(V[m-1] + self._Ek_N[m-1, m-1], V[0] + self._Ek_N[0, m-1])
 
             # sig = 0.0
             # for u in range(m):
@@ -257,8 +257,8 @@ class ExchangePotential(dobject):
         RV = np.zeros(self._N + 1, float)
 
         for l in range(self._N - 1, 0, -1):
-            # For numerical stability. See SI of arXiv:1905.0905
-            Elong = min(self.Ek_N(1, l + 1) + RV[l + 1], self.Ek_N(self._N - l, self._N) + RV[self._N])
+            # For numerical stability
+            Elong = min(self._Ek_N[1, l] + RV[l + 1], self._Ek_N[l, self._N - 1])
 
             # sig = 0.0
             # for p in range(l, self._N):
