@@ -74,7 +74,6 @@ class ExchangePotential(dobject):
     def get_vspring_and_fspring(self):
         """
         Calculates spring forces and potential for bosons.
-        Evaluated using recursion relation from arXiv:1905.090.
         """
         F = self.evaluate_dVB_from_VB()
 
@@ -109,7 +108,8 @@ class ExchangePotential(dobject):
                             np.exp(- self._betaP * (
                                 # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
                                 self._V[np.newaxis, :-1]
-                                # + np.asarray([(self.Ek_N(l + 1 - u, l + 1) if l >= u else 0) for l in range(self._N) for u in range(self._N)]).reshape((self._N, self._N))
+                                # + np.asarray([(self.Ek_N(l + 1 - u, l + 1) if l >= u else 0) for l in range(self._N)
+                                #                   for u in range(self._N)]).reshape((self._N, self._N))
                                 + self._E_from_to.T
                                 # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
                                 + self._V_backward[1:, np.newaxis]
@@ -250,7 +250,7 @@ class ExchangePotential(dobject):
             assert sig != 0.0
             RV[l] = Elong - np.log(sig) / self._betaP
 
-        # V^{(N)}_{(1)}
+        # V^[1,N]
         RV[0] = self._V[-1]
 
         return RV
