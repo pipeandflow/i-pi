@@ -37,6 +37,8 @@ class ExchangePotential(dobject):
         self._N = len(self.bosons)
         self._P = nm.nbeads
         self._betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
+        self._spring_freq_squared = self.omegan2
+        self._particle_mass = dstrip(self.beads.m)[self.bosons[0]] # take mass of first boson
 
         self._q = self._init_bead_position_array(dstrip(self.beads.q))
 
@@ -173,14 +175,10 @@ class ExchangePotential(dobject):
         return F.reshape((self._P, 3 * self.natoms))
     
     def _spring_force_prefix(self):
-        m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-        omegaP_sq = self.omegan2
-        return (-1.0) * m * omegaP_sq
+        return (-1.0) * self._particle_mass * self._spring_freq_squared
 
     def _spring_potential_prefix(self):
-        mass = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-        omegaP_sq = self.omegan2
-        return 0.5 * mass * omegaP_sq
+        return 0.5 * self._particle_mass * self._spring_freq_squared
 
     def _evaluate_cycle_energies(self):
         Emks = np.zeros((self._N, self._N), dtype=float)
