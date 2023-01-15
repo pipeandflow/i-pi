@@ -733,14 +733,11 @@ class NormalModes(dobject):
         elif len(self.bosons) is self.natoms:
             return self.vspring_and_fspring_B[1]
         else:
-            # raise("@NormalModes: Implementing mixtures of B and D")
-            f_all = self.transform.nm2b(dstrip(self.fspringnm))
-            # zero force for bosons
-            for i, boson in enumerate(self.bosons):
-                boson_force_all_beads = self.vspring_and_fspring_B[1][:, 3 * boson : (3 * boson + 3)]
-                f_all[:, 3 * boson : (3 * boson + 3)] = boson_force_all_beads
+            f_distinguishable = self.transform.nm2b(dstrip(self.fspringnm))
+            f_all = f_distinguishable.reshape((self.nbeads, self.natoms, 3))
+            f_all[:, self.bosons, :] = self.vspring_and_fspring_B[1]
 
-            return f_all
+            return f_all.reshape((self.nbeads, 3 * self.natoms))
 
     def free_babstep(self):
         """

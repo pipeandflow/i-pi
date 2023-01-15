@@ -167,7 +167,7 @@ class ExchangePotential(dobject):
         # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
         F[0, :, :] = np.einsum('ljk,jl->lk', force_from_neighbors, connection_probs)
 
-        return F.reshape((self._P, 3 * self._N))
+        return F
     
     def _spring_force_prefix(self):
         return (-1.0) * self._particle_mass * self._spring_freq_squared
