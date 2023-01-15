@@ -176,7 +176,8 @@ class ExchangePotential(dobject):
         return 0.5 * self._particle_mass * self._spring_freq_squared
 
     def _evaluate_cycle_energies(self):
-        Emks = np.zeros((self._N, self._N), dtype=float)
+        # using column-major (Fortran order) because uses of the array are mostly within the same column
+        Emks = np.zeros((self._N, self._N), dtype=float, order='F')
 
         intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
         spring_energy_first_last_bead_array = np.sum(self._bead_diff_inter_first_last_bead ** 2, axis=-1)
