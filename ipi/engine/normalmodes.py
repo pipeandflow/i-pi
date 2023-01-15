@@ -715,7 +715,7 @@ class NormalModes(dobject):
 
         boson_mass = dstrip(self.beads.m)[self.bosons[0]] # take mass of first boson
         betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
-        exchange_potential = ExchangePotential(self.bosons, dstrip(self.beads.q), self.natoms,
+        exchange_potential = ExchangePotential(self.bosons, dstrip(self.beads.q),
                                                self.nbeads, boson_mass,
                                                self.omegan2, betaP)
         return exchange_potential.get_vspring_and_fspring()
@@ -734,12 +734,13 @@ class NormalModes(dobject):
             return self.vspring_and_fspring_B[1]
         else:
             # raise("@NormalModes: Implementing mixtures of B and D")
-            f_distinguish = self.transform.nm2b(dstrip(self.fspringnm))
+            f_all = self.transform.nm2b(dstrip(self.fspringnm))
             # zero force for bosons
-            for boson in self.bosons:
-                f_distinguish[:, 3 * boson : (3 * boson + 3)] = 0.0
+            for i, boson in enumerate(self.bosons):
+                boson_force_all_beads = self.vspring_and_fspring_B[1][:, 3 * boson : (3 * boson + 3)]
+                f_all[:, 3 * boson : (3 * boson + 3)] = boson_force_all_beads
 
-            return f_distinguish + self.vspring_and_fspring_B[1]
+            return f_all
 
     def free_babstep(self):
         """

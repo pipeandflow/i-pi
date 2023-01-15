@@ -26,14 +26,13 @@ def kth_diag_indices(a, k):
 
 
 class ExchangePotential(dobject):
-    def __init__(self, boson_identities, all_particle_bead_positions, natoms,
+    def __init__(self, boson_identities, all_particle_bead_positions,
                  nbeads, bead_mass,
                  spring_freq_squared, betaP):
         assert len(boson_identities) != 0
 
         self._N = len(boson_identities)
         self._P = nbeads
-        self.natoms = natoms
         self._betaP = betaP
         self._spring_freq_squared = spring_freq_squared
         self._particle_mass = bead_mass
@@ -78,7 +77,7 @@ class ExchangePotential(dobject):
         return [self._V[-1], F]
 
     def evaluate_dVB_from_VB(self):
-        F = np.zeros((self._P, self.natoms, 3), float)
+        F = np.zeros((self._P, self._N, 3), float)
 
         # force on intermediate beads
         #
@@ -168,7 +167,7 @@ class ExchangePotential(dobject):
         # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
         F[0, :, :] = np.einsum('ljk,jl->lk', force_from_neighbors, connection_probs)
 
-        return F.reshape((self._P, 3 * self.natoms))
+        return F.reshape((self._P, 3 * self._N))
     
     def _spring_force_prefix(self):
         return (-1.0) * self._particle_mass * self._spring_freq_squared
