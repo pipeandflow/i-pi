@@ -731,7 +731,7 @@ class NormalModes(dobject):
         if len(self.bosons) == 0:
             return self.transform.nm2b(dstrip(self.fspringnm))
         elif len(self.bosons) is self.natoms:
-            return self.vspring_and_fspring_B[1]
+            return self.vspring_and_fspring_B[1].reshape((self.nbeads, 3 * self.natoms))
         else:
             f_distinguishable = self.transform.nm2b(dstrip(self.fspringnm))
             f_all = f_distinguishable.reshape((self.nbeads, self.natoms, 3))
