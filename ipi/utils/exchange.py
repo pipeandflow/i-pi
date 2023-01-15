@@ -26,21 +26,19 @@ def kth_diag_indices(a, k):
 
 
 class ExchangePotential(dobject):
-    def __init__(self, nm):
-        assert len(nm.bosons) != 0
-        self.bosons = nm.bosons
-        self.beads = nm.beads  # TODO: make dependence on positions explicit
-        self.natoms = nm.natoms
-        self.omegan2 = nm.omegan2
-        self.ensemble = nm.ensemble
+    def __init__(self, boson_identities, all_particle_bead_positions, natoms,
+                 nbeads, bead_mass,
+                 spring_freq_squared, betaP):
+        assert len(boson_identities) != 0
 
-        self._N = len(self.bosons)
-        self._P = nm.nbeads
-        self._betaP = 1.0 / (self._P * units.Constants.kb * self.ensemble.temp)
-        self._spring_freq_squared = self.omegan2
-        self._particle_mass = dstrip(self.beads.m)[self.bosons[0]] # take mass of first boson
+        self._N = len(boson_identities)
+        self._P = nbeads
+        self.natoms = natoms
+        self._betaP = betaP
+        self._spring_freq_squared = spring_freq_squared
+        self._particle_mass = bead_mass
 
-        self._q = self._init_bead_position_array(dstrip(self.beads.q))
+        self._q = self._init_bead_position_array(boson_identities, all_particle_bead_positions)
 
         # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
         self._bead_diff_intra = np.diff(self._q, axis=0)
@@ -55,14 +53,12 @@ class ExchangePotential(dobject):
         # self._V_backward[l] = V^[l+1, N]
         self._V_backward = self._evaluate_V_backward()
 
-    def _init_bead_position_array(self, qall):
-        qall = dstrip(self.beads.q)
-
+    def _init_bead_position_array(self, boson_identities, qall):
         q = np.empty((self._P, self._N, 3), float)
         # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
         # q[j,:] stores 3*natoms xyz coordinates of all atoms.
         # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-        for ind, boson in enumerate(self.bosons):
+        for ind, boson in enumerate(boson_identities):
             q[:, ind, :] = qall[:, 3 * boson: (3 * boson + 3)]
 
         return q
