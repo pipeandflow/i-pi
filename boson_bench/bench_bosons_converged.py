@@ -5,7 +5,7 @@ import subprocess
 import re
 import statistics
 # import matplotlib.pyplot as plt
-import random # TODO: boo!
+import random
 import numpy as np
 import csv
 import itertools
@@ -275,6 +275,9 @@ def main():
     global args
     args = parser.parse_args()
     logger.debug("args: %s" % str(args))
+
+    logger.debug("python seed: %d" % args.seed) # same as i-pi seed
+    random.seed(args.seed)
 
     boson_scalability([args.num_bosons])
 
