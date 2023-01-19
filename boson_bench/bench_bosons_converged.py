@@ -180,7 +180,7 @@ def time_ipi(input_filename):
 
     start_time = time.time()
 
-    for _ in xrange(0, args.num_clients):
+    for _ in range(0, args.num_clients):
         driver.append(
             subprocess.Popen(cmd,
                              # cwd=(cwd),
