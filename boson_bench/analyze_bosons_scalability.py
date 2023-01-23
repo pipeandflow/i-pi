@@ -36,21 +36,23 @@ def analyze_scalability_csv(infile_path):
 
     plt.errorbar(x, y, err, linestyle='None', marker='o', ecolor='red')
     plt.plot(x, intercept + slope * x, '-', label=f'slope ${slope:.3f}$')
-    plt.xlabel('N')
-    plt.xticks(x, [int(n) for n in nbosons])
-    plt.ylabel('time (s)')
-    plt.gca().yaxis.set_major_formatter(lambda y, pos: str(int(pow(2, y))))
-    plt.legend()
-    plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description='analyze boson scalability results')
 
-    parser.add_argument('infile', type=str,
+    parser.add_argument('infile', type=str, nargs='*',
                         help='path to csv with results')
     args = parser.parse_args()
 
-    analyze_scalability_csv(args.infile)
+    for infile in args.infile:
+        analyze_scalability_csv(infile)
+
+    plt.xlabel('N')
+    plt.ylabel('time (s)')
+    plt.gca().xaxis.set_major_formatter(lambda x, pos: str(int(pow(2, x))))
+    plt.gca().yaxis.set_major_formatter(lambda y, pos: str(int(pow(2, y))))
+    plt.legend()
+    plt.show()
 
 if __name__ == "__main__":
     main()
