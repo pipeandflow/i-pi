@@ -35,11 +35,12 @@ def analyze_scalability_csv(infile_path):
     print(slope, intercept, r, p)
 
     plt.errorbar(x, y, err, linestyle='None', marker='o', ecolor='red')
-    plt.plot(x, intercept + slope * x, '-')
+    plt.plot(x, intercept + slope * x, '-', label=f'slope ${slope:.3f}$')
     plt.xlabel('N')
     plt.xticks(x, [int(n) for n in nbosons])
     plt.ylabel('time (s)')
     plt.gca().yaxis.set_major_formatter(lambda y, pos: str(int(pow(2, y))))
+    plt.legend()
     plt.show()
 
 def main():
