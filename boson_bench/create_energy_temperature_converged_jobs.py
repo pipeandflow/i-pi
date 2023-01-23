@@ -30,7 +30,7 @@ def main():
 		for i in range(num_repetitions):
 			job_id = boson_converged_job_id(num_bosons, nbeads, temperature, i)
 
-			ipi_socket = 350000 + 100 * t_id + i
+			ipi_socket = 350000 + 100 * hbw + i
 
 			seed = random.randint(1,1000000)
 			assert seed not in past_seeds
