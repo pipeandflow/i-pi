@@ -252,8 +252,7 @@ def boson_scalability(boson_numbers):
 def main():
     set_logger()
 
-    boson_numbers = [1, 2]
-    # boson_numbers = [16, 32, 64, 128, 256, 512, 1024]
+    boson_numbers = [16, 32, 64, 128, 256, 512, 1024]
 
     random.seed(1885) # TODO: hardcoded
 
