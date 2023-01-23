@@ -260,10 +260,9 @@ def main():
     MAX_N = 2
     INCREMENT = 4
 
-    analyze_scalability_csv_raw()
-    assert False
-
     boson_numbers = list(range(MIN_N, MAX_N + 1, INCREMENT))
+
+    random.seed(1885) # TODO: hardcoded
 
     boson_scalability(boson_numbers)
 
