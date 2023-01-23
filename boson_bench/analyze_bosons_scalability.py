@@ -20,14 +20,15 @@ def analyze_scalability_csv(infile_path):
     keyfunc = lambda d: d[0]
     nbosons = []
     times_per_nbosons = []
-    data = sorted(data_log, key=keyfunc)
+    data = sorted(data, key=keyfunc)
     for k, g in itertools.groupby(data, keyfunc):
         nbosons.append(k)
         times_per_nbosons.append(np.asarray(list(g))[:,1])
 
-    x = np.asarray(nbosons)
-    y = np.mean(times_per_nbosons, axis=1)
-    err = np.std(times_per_nbosons, axis=1)
+    x = np.log2(np.asarray(nbosons))
+    logtimes_per_boson = np.log2(times_per_nbosons)
+    y = np.mean(logtimes_per_boson, axis=1)
+    err = np.std(logtimes_per_boson, axis=1)
     print("std:", err)
 
     slope, intercept, r, p, std_err = stats.linregress(x, y)
@@ -35,8 +36,10 @@ def analyze_scalability_csv(infile_path):
 
     plt.errorbar(x, y, err, linestyle='None', marker='o', ecolor='red')
     plt.plot(x, intercept + slope * x, '-')
-    plt.xlabel('log N')
-    plt.ylabel('log time (s)')
+    plt.xlabel('N')
+    plt.xticks(x, [int(n) for n in nbosons])
+    plt.ylabel('time (s)')
+    plt.gca().yaxis.set_major_formatter(lambda y, pos: str(int(pow(2, y))))
     plt.show()
 
 def main():
