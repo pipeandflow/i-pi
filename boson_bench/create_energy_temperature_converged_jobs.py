@@ -26,8 +26,6 @@ def main():
 
 	for hbw in [2, 3, 4, 5, 6]:
 		temperature = temperature_for_hbw(hbw)
-		print(hbw, temperature)
-		continue
 
 		for i in range(num_repetitions):
 			job_id = boson_converged_job_id(num_bosons, nbeads, temperature, i)
