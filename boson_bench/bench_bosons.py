@@ -14,8 +14,14 @@ import tempfile
 from scipy import stats
 import math
 import os
+import matplotlib.pyplot as plt
+
+# Baseline file:
+# BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "boson_scaling_baseline.csv")
 
 BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "boson_scaling.csv")
+# BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "boson_scaling_8192_2.csv")
+# BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "boson_scaling_8192_raw.csv")
 
 SINGLE_BENCH_TIMEOUT_SECONDS = 1800
 
@@ -247,12 +253,6 @@ def boson_scalability(boson_numbers):
             w.writerow({"nbosons": nbosons, "time": time})
             csv_log.flush()
 
-def analyze_scalability_csv():
-    data = np.genfromtxt(BOSON_SCALING_CSV_OUTPUT_PATH, delimiter=",", skip_header=True)
-    data_log = np.log(data)
-    slope, intercept, r, p, std_err = stats.linregress(data_log)
-    print(slope, intercept, r, p)
-
 def main():
     set_logger()
 
@@ -260,8 +260,8 @@ def main():
     MAX_N = 2
     INCREMENT = 4
 
-    # analyze_scalability_csv()
-    # assert False
+    analyze_scalability_csv_raw()
+    assert False
 
     boson_numbers = list(range(MIN_N, MAX_N + 1, INCREMENT))
 
