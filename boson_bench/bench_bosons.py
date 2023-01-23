@@ -23,7 +23,7 @@ BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__
 # BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "boson_scaling_8192_2.csv")
 # BOSON_SCALING_CSV_OUTPUT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "boson_scaling_8192_raw.csv")
 
-SINGLE_BENCH_TIMEOUT_SECONDS = 1800
+SINGLE_BENCH_TIMEOUT_SECONDS = 604800
 
 def ipi_config(boson_positions, boson_masses, boson_labels, bosons_list):
     INPUT_XML_TEMPLATE = """<!--REGTEST
@@ -234,7 +234,7 @@ def random_boson_positions(nbosons):
     return [[random_position(), random_position(), random_position()] for _ in range(nbosons)]
 
 def bench_bosons(nbosons):
-    NUM_REPETITIONS = 5
+    NUM_REPETITIONS = 3
 
     boson_positions = random_boson_positions(nbosons)
 
@@ -256,11 +256,7 @@ def boson_scalability(boson_numbers):
 def main():
     set_logger()
 
-    MIN_N = 1
-    MAX_N = 2
-    INCREMENT = 4
-
-    boson_numbers = list(range(MIN_N, MAX_N + 1, INCREMENT))
+    boson_numbers = [16, 32, 64, 128, 256, 512, 1024]
 
     random.seed(1885) # TODO: hardcoded
 
