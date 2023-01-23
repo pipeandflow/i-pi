@@ -13,24 +13,7 @@ import math
 import os
 import argparse
 
-def analyze_scalability_csv():
-    data = np.genfromtxt(BOSON_SCALING_CSV_OUTPUT_PATH, delimiter=",", skip_header=True)
-    data_log = np.log2(data)
-    x = data_log[:,0]
-    y = data_log[:,1]
-    # err = data[:,2] / data[:,0]
-    err = np.zeros(len(x))
-
-    slope, intercept, r, p, std_err = stats.linregress(x, y)
-    print(slope, intercept, r, p)
-
-    plt.errorbar(x, y, err, linestyle='None', marker='o', ecolor='red')
-    plt.plot(x, intercept + slope * x, '-')
-    plt.xlabel('log N')
-    plt.ylabel('log time (s)')
-    plt.show()
-
-def analyze_scalability_csv_raw(infile_path):
+def analyze_scalability_csv(infile_path):
     data = np.genfromtxt(infile_path, delimiter=",", skip_header=True)
     data_log = np.log2(data)
 
@@ -63,7 +46,7 @@ def main():
                         help='path to csv with results')
     args = parser.parse_args()
 
-    analyze_scalability_csv_raw(args.infile)
+    analyze_scalability_csv(args.infile)
 
 if __name__ == "__main__":
     main()

@@ -233,30 +233,27 @@ def random_position():
 def random_boson_positions(nbosons):
     return [[random_position(), random_position(), random_position()] for _ in range(nbosons)]
 
-def bench_bosons(nbosons):
+def boson_scalability(boson_numbers):
     NUM_REPETITIONS = 3
 
-    boson_positions = random_boson_positions(nbosons)
-
-    time_measurements = [bench_bosons_single(nbosons, boson_positions) for _ in range(0, NUM_REPETITIONS)]
-    logger.info("standard deviation. nbosons: %d; time: %f" % (nbosons, statistics.stdev(time_measurements)))
-    return statistics.mean(time_measurements)
-
-def boson_scalability(boson_numbers):
     with open(BOSON_SCALING_CSV_OUTPUT_PATH, "wt") as csv_log:
         w = csv.DictWriter(csv_log, ["nbosons", "time"])
         w.writeheader()
         csv_log.flush()
 
         for nbosons in boson_numbers:
-            time = bench_bosons(nbosons)
-            w.writerow({"nbosons": nbosons, "time": time})
-            csv_log.flush()
+            boson_positions = random_boson_positions(nbosons)
+
+            for _ in range(NUM_REPETITIONS):
+                measured_time = bench_bosons_single(nbosons, boson_positions)
+                w.writerow({"nbosons": nbosons, "time": measured_time})
+                csv_log.flush()
 
 def main():
     set_logger()
 
-    boson_numbers = [16, 32, 64, 128, 256, 512, 1024]
+    boson_numbers = [1, 2]
+    # boson_numbers = [16, 32, 64, 128, 256, 512, 1024]
 
     random.seed(1885) # TODO: hardcoded
 
