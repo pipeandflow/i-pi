@@ -25,13 +25,17 @@ def analyze_scalability_csv(infile_path):
         nbosons.append(k)
         times_per_nbosons.append(np.asarray(list(g))[:,1])
 
-    x = np.log2(np.asarray(nbosons))
-    logtimes_per_boson = np.log2(times_per_nbosons)
-    y = np.mean(logtimes_per_boson, axis=1)
-    err = np.std(logtimes_per_boson, axis=1)
+    lognbosons = np.log2(np.asarray(nbosons))
+    mean_time_per_boson = np.mean(times_per_nbosons, axis=1)
+    mean_time_error = np.std(times_per_nbosons, axis=1)
+    log_mean_time_per_boson = np.log2(mean_time_per_boson)
+
+    x = lognbosons
+    y = log_mean_time_per_boson
+    err = mean_time_error / mean_time_per_boson
     print("std:", err)
 
-    slope, intercept, r, p, std_err = stats.linregress(x, y)
+    slope, intercept, r, p, std_err = stats.linregress(lognbosons, log_mean_time_per_boson)
     print(slope, intercept, r, p)
 
     plt.errorbar(x, y, err, linestyle='None', marker='o', ecolor='red')
@@ -46,6 +50,15 @@ def main():
 
     for infile in args.infile:
         analyze_scalability_csv(infile)
+
+    # plt.rcParams['font.size'] = 15
+    # plt.rc('axes',linewidth=2,labelpad=10)
+    # plt.rcParams["xtick.direction"] = "in"
+    # plt.rcParams["ytick.direction"] = "in"
+    # plt.rc('xtick.major',size=10, width=2)
+    # plt.rc('xtick.minor',size=7, width=2)
+    # plt.rc('ytick.major',size=10, width=2)
+    # plt.rc('ytick.minor',size=7, width=2)
 
     plt.xlabel('N')
     plt.ylabel('time (s)')
