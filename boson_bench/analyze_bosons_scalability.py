@@ -30,16 +30,18 @@ def analyze_scalability_csv(infile_path):
     mean_time_error = np.std(times_per_nbosons, axis=1)
     log_mean_time_per_boson = np.log2(mean_time_per_boson)
 
-    x = lognbosons
-    y = log_mean_time_per_boson
-    err = mean_time_error / mean_time_per_boson
+    # x = lognbosons
+    # y = log_mean_time_per_boson
+    x = np.asarray(nbosons)
+    y = mean_time_per_boson
+    err = mean_time_error
     print("std:", err)
 
     slope, intercept, r, p, std_err = stats.linregress(lognbosons, log_mean_time_per_boson)
     print(slope, intercept, r, p)
 
     plt.errorbar(x, y, err, linestyle='None', marker='o', ecolor='red')
-    plt.plot(x, intercept + slope * x, '-', label=f'slope ${slope:.3f}$')
+    plt.plot(x, np.exp2(intercept + slope * np.log2(x)), '-', label=f'slope ${slope:.3f}$')
 
 def main():
     parser = argparse.ArgumentParser(description='analyze boson scalability results')
@@ -62,8 +64,7 @@ def main():
 
     plt.xlabel('N')
     plt.ylabel('time (s)')
-    plt.gca().xaxis.set_major_formatter(lambda x, pos: str(int(pow(2, x))))
-    plt.gca().yaxis.set_major_formatter(lambda y, pos: str(int(pow(2, y))))
+    plt.loglog()
     plt.legend()
     plt.show()
 
