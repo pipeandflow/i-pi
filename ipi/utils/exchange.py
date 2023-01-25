@@ -222,7 +222,7 @@ class ExchangePotential(dobject):
             sig = np.sum(np.exp(- self._betaP *
                                 (V[:m] + self._E_from_to[:m, m - 1] - Elong)
                                 ))
-            assert sig != 0.0
+            assert sig != 0.0 and np.isfinite(sig)
             V[m] = Elong - np.log(sig / m) / self._betaP
 
         return V
@@ -241,7 +241,7 @@ class ExchangePotential(dobject):
             sig = np.sum(np.reciprocal(np.arange(l + 1.0, self._N + 1)) *
                          np.exp(- self._betaP * (self._E_from_to[l, l:] + RV[l + 1:]
                                                  - Elong)))
-            assert sig != 0.0
+            assert sig != 0.0 and np.isfinite(sig)
             RV[l] = Elong - np.log(sig) / self._betaP
 
         # V^[1,N]
