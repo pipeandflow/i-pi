@@ -38,7 +38,7 @@ def main():
 
 			ipi_runline = ipi_args(num_bosons, nbeads, temperature, seed, ipi_socket, num_clients)
 
-			create_run_script(job_id, ipi_runline)
+			create_run_script(job_id, ipi_runline, ipi_socket)
 
 if __name__ == "__main__":
     main()
