@@ -25,6 +25,8 @@ source {ipi_root}/env.sh
 cp {ipi_root}/boson_bench/bench_bosons_converged.py $RESULTS_DIR/bench_bosons_converged.py
 module load python/python-anaconda_3.7
 cd $RESULTS_DIR
+
+rm -f /tmp/ipi_{ipi_socket}
 python3 $RESULTS_DIR/bench_bosons_converged.py {args}"""
 
 def boson_converged_job_id(num_bosons, nbeads, temperature, details):
@@ -42,6 +44,7 @@ def create_run_script(job_id, ipi_args):
         output_run_script.write(RUN_SCRIPT_CONTENT_TEMPLATE.format(ipi_root=IPI_ROOT, 
                                                                    output_dir_root=STORAGE_ROOT_DIR,
                                                                    job_id=job_id,
+                                                                   ipi_socket=ipi_socket,
                                                                    args=ipi_args))
 
     f = pathlib.Path(output_run_script_path)
