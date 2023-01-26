@@ -243,10 +243,10 @@ class ExchangePotential(dobject):
                                                  - Elong)))
             # TODO: remove
             if (sig == 0 or not np.isfinite(sig)):
-                print("l", l)
-                print("Elong", Elong, self._E_from_to[1, l] + RV[l + 1], self._E_from_to[l, self._N - 1])
+                print("l", l, file=sys.stderr)
+                print("Elong", Elong, self._E_from_to[1, l] + RV[l + 1], self._E_from_to[l, self._N - 1], file=sys.stderr)
                 for p in range(l, self._N):
-                    print(p, self._Ek_N[l, p], RV[p + 1], self._E_from_to[l, l:] + RV[l + 1:] - Elong)
+                    print(p, self._E_from_to[l, p], RV[p + 1], self._E_from_to[l, l:] + RV[l + 1:] - Elong, file=sys.stderr)
             assert sig != 0.0 and np.isfinite(sig)
             RV[l] = Elong - np.log(sig) / self._betaP
 
