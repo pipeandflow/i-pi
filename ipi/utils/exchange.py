@@ -10,6 +10,8 @@ from ipi.utils.depend import *
 
 import numpy as np
 
+import sys # TODO: remove
+
 
 def kth_diag_indices(a, k):
     """
