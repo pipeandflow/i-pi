@@ -6,7 +6,7 @@ def main():
 	temperature = 5.804681293240046 # kelvin
 
 	num_repetitions = 3
-	num_clients = 1
+	num_clients = 4
 
 	random.seed(0)
 	past_seeds = set()
