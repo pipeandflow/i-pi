@@ -38,7 +38,7 @@ def boson_converged_job_id(num_bosons, nbeads, temperature, details):
 def ipi_args(num_bosons, nbeads, temperature, seed, ipi_socket, num_clients):
     return "%d %d %f %d %d -j %d" % (num_bosons, nbeads, temperature, seed, ipi_socket, num_clients)
 
-def create_run_script(job_id, ipi_args):
+def create_run_script(job_id, ipi_args, ipi_socket):
     output_run_script_path = "./run_%s.sh" % job_id
     with open(output_run_script_path, "wt") as output_run_script:
         output_run_script.write(RUN_SCRIPT_CONTENT_TEMPLATE.format(ipi_root=IPI_ROOT, 
@@ -76,7 +76,7 @@ def main():
 
     ipi_runline = ipi_args(args.num_bosons, args.nbeads, args.temperature, args.seed, args.ipi_socket, args.num_clients)
 
-    create_run_script(job_id, ipi_args)
+    create_run_script(job_id, ipi_args, args.ipi_socket)
     
 if __name__ == "__main__":
     main()
