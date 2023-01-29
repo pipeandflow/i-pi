@@ -234,7 +234,7 @@ class ExchangePotential(dobject):
 
         for l in range(self._N - 1, 0, -1):
             # For numerical stability
-            Elong = min(self._E_from_to[1, l] + RV[l + 1], self._E_from_to[l, self._N - 1])
+            Elong = min(self._E_from_to[l, l] + RV[l + 1], self._E_from_to[l, self._N - 1])
 
             # sig = 0.0
             # for p in range(l, self._N):
