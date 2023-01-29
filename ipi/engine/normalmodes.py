@@ -715,7 +715,9 @@ class NormalModes(dobject):
 
         boson_mass = dstrip(self.beads.m)[self.bosons[0]] # take mass of first boson
         betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
-        exchange_potential = ExchangePotential(self.bosons, dstrip(self.beads.q),
+        # positions of only the boson atoms
+        q = self.beads.q.reshape((self.nbeads, self.natoms, 3))[:, self.bosons, :]
+        exchange_potential = ExchangePotential(self.bosons, q,
                                                self.nbeads, boson_mass,
                                                self.omegan2, betaP)
         return exchange_potential.get_vspring_and_fspring()

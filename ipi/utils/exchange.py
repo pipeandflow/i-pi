@@ -28,7 +28,7 @@ def kth_diag_indices(a, k):
 
 
 class ExchangePotential(dobject):
-    def __init__(self, boson_identities, all_particle_bead_positions,
+    def __init__(self, boson_identities, q,
                  nbeads, bead_mass,
                  spring_freq_squared, betaP):
         assert len(boson_identities) != 0
@@ -38,8 +38,7 @@ class ExchangePotential(dobject):
         self._betaP = betaP
         self._spring_freq_squared = spring_freq_squared
         self._particle_mass = bead_mass
-
-        self._q = self._init_bead_position_array(boson_identities, all_particle_bead_positions)
+        self._q = q
 
         # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
         self._bead_diff_intra = np.diff(self._q, axis=0)
@@ -53,16 +52,6 @@ class ExchangePotential(dobject):
 
         # self._V_backward[l] = V^[l+1, N]
         self._V_backward = self._evaluate_V_backward()
-
-    def _init_bead_position_array(self, boson_identities, qall):
-        q = np.empty((self._P, self._N, 3), float)
-        # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
-        # q[j,:] stores 3*natoms xyz coordinates of all atoms.
-        # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-        for ind, boson in enumerate(boson_identities):
-            q[:, ind, :] = qall[:, 3 * boson: (3 * boson + 3)]
-
-        return q
 
     def V_all(self):
         """
@@ -246,7 +235,7 @@ class ExchangePotential(dobject):
             # TODO: remove
             if (sig == 0 or not np.isfinite(sig)):
                 print("l", l, file=sys.stderr)
-                print("Elong", Elong, self._E_from_to[1, l] + RV[l + 1], self._E_from_to[l, self._N - 1], file=sys.stderr)
+                print("Elong", Elong, self._E_from_to[l, l] + RV[l + 1], self._E_from_to[l, self._N - 1], file=sys.stderr)
                 for p in range(l, self._N):
                     print(p, self._E_from_to[l, p], RV[p + 1], self._E_from_to[l, l:] + RV[l + 1:] - Elong, file=sys.stderr)
             assert sig != 0.0 and np.isfinite(sig)
