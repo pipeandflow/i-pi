@@ -20,7 +20,13 @@ NUM_REPETITIONS = 1
 
 global args
 
-def ipi_config(boson_positions, boson_masses, boson_labels, bosons_list,
+def bead_positions_across_particles(nbosons, i, pos):
+    assert len(pos) == nbosons, nbosons
+    all_particles_positions_in_one_array = str(flatten(pos))
+    return """<positions mode="manual" bead="{bead}"> {boson_positions} </positions>""".format(bead=i,
+                                                                                            boson_positions=all_particles_positions_in_one_array)
+
+def ipi_config(all_beads_positions, boson_masses, boson_labels, bosons_list,
               nbeads, temperature, seed, ipi_socket):
     INPUT_XML_TEMPLATE = """
 <simulation threading='False' verbosity='low'>
@@ -49,7 +55,7 @@ def ipi_config(boson_positions, boson_masses, boson_labels, bosons_list,
   </forces>
 
   <initialize nbeads="{nbeads}">
-    <positions mode="manual" bead="0"> {boson_positions} </positions>
+    {position_config}
     <masses mode="manual"> {boson_masses} </masses>
     <labels mode="manual"> {boson_labels} </labels>
     <cell>
@@ -82,7 +88,8 @@ def ipi_config(boson_positions, boson_masses, boson_labels, bosons_list,
 
 </simulation>
 """
-    return INPUT_XML_TEMPLATE.format(boson_positions=boson_positions, boson_masses=boson_masses, boson_labels=boson_labels, bosons_list=bosons_list,
+    position_config = "\n   ".join([bead_positions_across_particles(args.num_bosons, i, pos) for i, pos in enumerate(all_beads_positions)])
+    return INPUT_XML_TEMPLATE.format(position_config=position_config, boson_masses=boson_masses, boson_labels=boson_labels, bosons_list=bosons_list,
                                     temperature=temperature, nbeads=nbeads, seed=seed,
                                     ipi_socket=ipi_socket)
 
@@ -210,18 +217,14 @@ def bench_ipi(input_xml_str):
         measured_time = time_ipi(tmp.name)
         return measured_time
 
-def bench_bosons_single(nbosons, boson_positions):
+def bench_bosons_single(nbosons, boson_positions_all_beads):
     global args
-
-    assert len(boson_positions) == nbosons
-
-    boson_positions_config = str(flatten(boson_positions))
 
     boson_labels = str(["E"] * nbosons)
     boson_masses = str(["1.0"] * nbosons)
     bosons_list = str(list(range(nbosons)))
 
-    config = ipi_config(boson_positions_config, boson_masses, boson_labels, bosons_list,
+    config = ipi_config(boson_positions_all_beads, boson_masses, boson_labels, bosons_list,
                         args.nbeads, args.temperature, args.seed,
                         args.ipi_socket)
     logger.debug("ipi config: %s" % config)
@@ -238,7 +241,7 @@ def random_boson_positions(nbosons):
     return [[random_position(), random_position(), random_position()] for _ in range(nbosons)]
 
 def bench_bosons(nbosons):
-    boson_positions = random_boson_positions(nbosons)
+    boson_positions = [random_boson_positions(nbosons) for _ in range(args.nbeads)]
 
     time_measurements = [bench_bosons_single(nbosons, boson_positions) for _ in range(0, NUM_REPETITIONS)]
     logger.info("standard deviation. nbosons: %d; time: %f" % (nbosons, statistics.stdev(time_measurements)))
