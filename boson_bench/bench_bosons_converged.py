@@ -241,7 +241,7 @@ def random_boson_positions(nbosons):
     return [[random_position(), random_position(), random_position()] for _ in range(nbosons)]
 
 def bench_bosons(nbosons):
-    boson_positions = [random_boson_positions(nbosons) for _ in range(args.nbeads)]
+    boson_positions = [random_boson_positions(nbosons) for _ in range(args.nbeads_initial)]
 
     time_measurements = [bench_bosons_single(nbosons, boson_positions) for _ in range(0, NUM_REPETITIONS)]
     logger.info("standard deviation. nbosons: %d; time: %f" % (nbosons, statistics.stdev(time_measurements)))
@@ -273,6 +273,8 @@ def main():
                         help='seed')
     parser.add_argument('ipi_socket', metavar='socket', type=int,
                         help='ipi internal socket')
+    parser.add_argument('--nbeads-initial', type=int, default=1,
+                        help='number of beads to choose random positions for')
     parser.add_argument('-j', '--num-clients', type=int, default=1,
                         help='number of force-field clients')
     global args
