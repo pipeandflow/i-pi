@@ -33,8 +33,9 @@ def read_ipi_output(filename):
 
 def analyze_convergence_data_out(infile):
     o = read_ipi_output(infile)
-    avg_kinetic = -statistics.mean(o['virial_fq'][500:])
-    avg_potential = statistics.mean(o['potential'][500:])
+    avg_kinetic = -statistics.mean(o['virial_fq'][2000:])
+    avg_potential = statistics.mean(o['potential'][2000:])
+    print("Analyzing", infile)
     print("total number of points:", len(o['potential']))
     print("avg kinetic:", avg_kinetic)
     print("avg potential:", avg_potential)
