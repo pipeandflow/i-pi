@@ -111,7 +111,8 @@ class ExchangePotential(dobject):
         superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
         connection_probs[superdiagonal_indices] = 1 - (np.exp(- self._betaP *
                                                         (self._V[1:-1] + self._V_backward[1:-1] - self.V_all())))
-        if not np.all(connection_probs[superdiagonal_indices]):
+
+        if not np.all(connection_probs[superdiagonal_indices]) or not np.all(connection_probs[tril_indices]):
             print("Numerical instability suspsected", file=sys.stderr)
             print("Connection probabilities\n", connection_probs, file=sys.stderr)
             print("Potentials\n", self._V, self._V_backward, file=sys.stderr)
