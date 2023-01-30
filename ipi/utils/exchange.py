@@ -116,7 +116,7 @@ class ExchangePotential(dobject):
             print("Numerical instability suspected", file=sys.stderr)
             print("Connection probabilities\n", connection_probs, file=sys.stderr)
             print("Potentials\n", self._V, self._V_backward, file=sys.stderr)
-            print("Cycle energies\n", self._E_from_to)
+            print("Cycle energies\n", self._E_from_to, file=sys.stderr)
             assert False
 
         # on the last bead:
