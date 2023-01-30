@@ -132,6 +132,10 @@ class ExchangePotential(dobject):
                                (-np.transpose(self._bead_diff_inter_first_last_bead,
                                               axes=(1,0,2))
                                 + self._bead_diff_intra[-1, :, np.newaxis])
+        if not np.all(force_from_neighbors):
+            print("Numerical instability suspsected", self._P, force_from_neighbors, connection_probs,
+                  self._V, self._V_backward)
+            assert False
         # F[-1, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[l,j]}
         F[-1, :, :] = np.einsum('ljk,lj->lk', force_from_neighbors, connection_probs)
 
@@ -155,6 +159,10 @@ class ExchangePotential(dobject):
         #
         force_from_neighbors = self._spring_force_prefix() * \
                                     (self._bead_diff_inter_first_last_bead - self._bead_diff_intra[0, :, np.newaxis])
+        if not np.all(force_from_neighbors):
+            print("Numerical instability suspsected", 0, force_from_neighbors, connection_probs,
+                  self._V, self._V_backward)
+            assert False
         # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
         F[0, :, :] = np.einsum('ljk,jl->lk', force_from_neighbors, connection_probs)
 
