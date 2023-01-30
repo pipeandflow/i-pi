@@ -232,8 +232,8 @@ class ExchangePotential(dobject):
             sig = np.sum(np.reciprocal(np.arange(l + 1.0, self._N + 1)) *
                          np.exp(- self._betaP * (self._E_from_to[l, l:] + RV[l + 1:]
                                                  - Elong)))
-            # TODO: remove
-            if (sig == 0 or not np.isfinite(sig)):
+            # TODO: make nice
+            if sig == 0 or not np.isfinite(sig):
                 print("l", l, file=sys.stderr)
                 print("Elong", Elong, self._E_from_to[l, l] + RV[l + 1], self._E_from_to[l, self._N - 1], file=sys.stderr)
                 for p in range(l, self._N):
