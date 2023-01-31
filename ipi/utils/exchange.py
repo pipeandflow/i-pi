@@ -81,6 +81,15 @@ class ExchangePotential(dobject):
 
         # force on endpoint beads
         #
+        tril_indices = np.tril_indices(self._N, k=0)
+
+        # TODO: add unvectorized version
+        close_cycle_potentials = self._V[np.newaxis, :-1] + self._E_from_to.T + self._V_backward[1:, np.newaxis]
+        direct_link_potentials = self._V[1:-1] + self._V_backward[1:-1]
+
+        Elong = min(np.min(close_cycle_potentials[tril_indices]), np.min(direct_link_potentials))
+        sig_denom = np.exp(- self._betaP * (self.V_all() - Elong))
+
         connection_probs = np.zeros((self._N, self._N), float)
         # close cycle probabilities:
         # for u in range(0, self._N):
@@ -88,29 +97,31 @@ class ExchangePotential(dobject):
         #         connection_probs[l][u] = 1 / (l + 1) * \
         #                np.exp(- self._betaP *
         #                        (self.V_forward(u - 1) + self.Ek_N(l + 1 - u, l + 1) + self.V_backward(l + 1)
-        #                         - self.V_all()))
-        tril_indices = np.tril_indices(self._N, k=0)
+        #                         - Elong))
         connection_probs[tril_indices] = (
                             # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
                             np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis] *
                             np.exp(- self._betaP * (
-                                # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
-                                self._V[np.newaxis, :-1]
-                                # + np.asarray([(self.Ek_N(l + 1 - u, l + 1) if l >= u else 0) for l in range(self._N)
-                                #                   for u in range(self._N)]).reshape((self._N, self._N))
-                                + self._E_from_to.T
-                                # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
-                                + self._V_backward[1:, np.newaxis]
-                                - self.V_all()
+                                # # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
+                                # self._V[np.newaxis, :-1]
+                                # # + np.asarray([(self.Ek_N(l + 1 - u, l + 1) if l >= u else 0) for l in range(self._N)
+                                # #                   for u in range(self._N)]).reshape((self._N, self._N))
+                                # + self._E_from_to.T
+                                # # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
+                                # + self._V_backward[1:, np.newaxis]
+                                close_cycle_potentials
+                                - Elong
                             )))[tril_indices]
 
         # direct link probabilities:
         # for l in range(self._N - 1):
-        #     connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
-        #                                         self.V_all())))
+        #     connection_probs[l][l+1] = sig_denom - (np.exp(- self._betaP * (self.V_forward(l) + self.V_backward(l + 1) -
+        #                                         Elong)))
         superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
-        connection_probs[superdiagonal_indices] = 1 - (np.exp(- self._betaP *
-                                                        (self._V[1:-1] + self._V_backward[1:-1] - self.V_all())))
+        connection_probs[superdiagonal_indices] = sig_denom - (np.exp(- self._betaP * (
+                                                        # self._V[1:-1] + self._V_backward[1:-1]
+                                                        direct_link_potentials
+                                                        - Elong)))
 
         if not np.all(connection_probs[superdiagonal_indices]) or not np.all(connection_probs[tril_indices]):
             print("Numerical instability suspected", file=sys.stderr)
@@ -139,8 +150,8 @@ class ExchangePotential(dobject):
                                (-np.transpose(self._bead_diff_inter_first_last_bead,
                                               axes=(1,0,2))
                                 + self._bead_diff_intra[-1, :, np.newaxis])
-        # F[-1, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[l,j]}
-        F[-1, :, :] = np.einsum('ljk,lj->lk', force_from_neighbors, connection_probs)
+        # F[-1, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[l,j]} / sig_denom
+        F[-1, :, :] = np.einsum('ljk,lj->lk', force_from_neighbors, connection_probs) / sig_denom
 
         # on the first bead:
         #
@@ -162,8 +173,8 @@ class ExchangePotential(dobject):
         #
         force_from_neighbors = self._spring_force_prefix() * \
                                     (self._bead_diff_inter_first_last_bead - self._bead_diff_intra[0, :, np.newaxis])
-        # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
-        F[0, :, :] = np.einsum('ljk,jl->lk', force_from_neighbors, connection_probs)
+        # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]} / sig_denom
+        F[0, :, :] = np.einsum('ljk,jl->lk', force_from_neighbors, connection_probs) / sig_denom
 
         return F
     
