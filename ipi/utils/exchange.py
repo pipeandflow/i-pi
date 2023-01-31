@@ -128,6 +128,9 @@ class ExchangePotential(dobject):
             print("Connection probabilities\n", connection_probs, file=sys.stderr)
             print("Potentials\n", self._V, self._V_backward, file=sys.stderr)
             print("Cycle energies\n", self._E_from_to, file=sys.stderr)
+            print("Close cycle potentials\n", close_cycle_potentials, file=sys.stderr)
+            print("Direct link potentials\n", direct_link_potentials, file=sys.stderr)
+            print("Elong", Elong, file=sys.stderr)
             assert False
 
         # on the last bead:
