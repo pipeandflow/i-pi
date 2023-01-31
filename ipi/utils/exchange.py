@@ -87,7 +87,7 @@ class ExchangePotential(dobject):
         close_cycle_potentials = self._V[np.newaxis, :-1] + self._E_from_to.T + self._V_backward[1:, np.newaxis]
         direct_link_potentials = self._V[1:-1] + self._V_backward[1:-1]
 
-        Elong = min(np.min(close_cycle_potentials[tril_indices]), np.min(direct_link_potentials))
+        Elong = max(np.max(close_cycle_potentials[tril_indices]), np.max(direct_link_potentials))
         sig_denom = np.exp(- self._betaP * (self.V_all() - Elong))
 
         connection_probs = np.zeros((self._N, self._N), float)
