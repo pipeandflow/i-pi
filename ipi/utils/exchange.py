@@ -8,10 +8,11 @@ Used in /engine/normalmodes.py
 from ipi.utils import units
 from ipi.utils.depend import *
 
+import sys # TODO: remove
+
 import numpy as np
 np.set_printoptions(precision=15) # TODO: remove
-
-import sys # TODO: remove
+np.set_printoptions(threshold=sys.maxsize) # TODO: remove
 
 
 def kth_diag_indices(a, k):
