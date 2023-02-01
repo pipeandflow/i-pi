@@ -87,7 +87,8 @@ class ExchangePotential(dobject):
         close_cycle_potentials = self._V[np.newaxis, :-1] + self._E_from_to.T + self._V_backward[1:, np.newaxis]
         direct_link_potentials = self._V[1:-1] + self._V_backward[1:-1]
 
-        Elong = min(np.min(close_cycle_potentials[tril_indices]), np.min(direct_link_potentials))
+        # Elong = min(np.min(close_cycle_potentials[tril_indices]), np.min(direct_link_potentials))
+        Elong = self.V_all()
         sig_denom = np.exp(- self._betaP * (self.V_all() - Elong))
 
         connection_probs = np.zeros((self._N, self._N), float)
@@ -123,15 +124,14 @@ class ExchangePotential(dobject):
                                                         direct_link_potentials
                                                         - Elong)))
 
-        if not np.all(connection_probs[superdiagonal_indices]) or not np.all(connection_probs[tril_indices]):
-            print("Numerical instability suspected", file=sys.stderr)
-            print("Connection probabilities\n", connection_probs, file=sys.stderr)
-            print("Potentials\n", self._V, self._V_backward, file=sys.stderr)
-            print("Cycle energies\n", self._E_from_to, file=sys.stderr)
-            print("Close cycle potentials\n", close_cycle_potentials, file=sys.stderr)
-            print("Direct link potentials\n", direct_link_potentials, file=sys.stderr)
-            print("Elong", Elong, file=sys.stderr)
-            assert False
+        # if not np.all(connection_probs[superdiagonal_indices]) or not np.all(connection_probs[tril_indices]):
+        #     print("Numerical instability suspected", file=sys.stderr)
+        print("Connection probabilities\n", connection_probs, file=sys.stderr)
+        print("Potentials\n", self._V, self._V_backward, file=sys.stderr)
+        print("Cycle energies\n", self._E_from_to, file=sys.stderr)
+        print("Close cycle potentials\n", close_cycle_potentials, file=sys.stderr)
+        print("Direct link potentials\n", direct_link_potentials, file=sys.stderr)
+        print("Elong", Elong, file=sys.stderr)
 
         # on the last bead:
         #
