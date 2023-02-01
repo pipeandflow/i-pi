@@ -9,6 +9,7 @@ from ipi.utils import units
 from ipi.utils.depend import *
 
 import numpy as np
+np.set_printoptions(precision=15) # TODO: remove
 
 import sys # TODO: remove
 
