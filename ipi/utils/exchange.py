@@ -11,8 +11,9 @@ from ipi.utils.depend import *
 import sys # TODO: remove
 
 import numpy as np
-np.set_printoptions(precision=15) # TODO: remove
-np.set_printoptions(threshold=sys.maxsize) # TODO: remove
+
+def arr2str(arr):
+    return np.array2string(arr, separator=", ")
 
 
 def kth_diag_indices(a, k):
@@ -34,6 +35,11 @@ class ExchangePotential(dobject):
                  nbeads, bead_mass,
                  spring_freq_squared, betaP):
         assert len(boson_identities) != 0
+
+        np.set_printoptions(precision=15)  # TODO: remove
+        np.set_printoptions(threshold=sys.maxsize)  # TODO: remove
+
+        np.set_printoptions(formatter={'float_kind': lambda x: '{:,}'.format(x)})
 
         self._N = len(boson_identities)
         self._P = nbeads
@@ -128,11 +134,12 @@ class ExchangePotential(dobject):
 
         # if not np.all(connection_probs[superdiagonal_indices]) or not np.all(connection_probs[tril_indices]):
         #     print("Numerical instability suspected", file=sys.stderr)
-        print("Connection probabilities\n", connection_probs, file=sys.stderr)
-        print("Potentials\n", self._V, self._V_backward, file=sys.stderr)
-        print("Cycle energies\n", self._E_from_to, file=sys.stderr)
-        print("Close cycle potentials\n", close_cycle_potentials, file=sys.stderr)
-        print("Direct link potentials\n", direct_link_potentials, file=sys.stderr)
+
+        print("Connection probabilities\n", arr2str(connection_probs), file=sys.stderr)
+        print("Potentials\n", arr2str(self._V), arr2str(self._V_backward), file=sys.stderr)
+        print("Cycle energies\n", arr2str(self._E_from_to), file=sys.stderr)
+        print("Close cycle potentials\n", arr2str(close_cycle_potentials), file=sys.stderr)
+        print("Direct link potentials\n", arr2str(direct_link_potentials), file=sys.stderr)
         print("Elong", Elong, file=sys.stderr)
 
         # on the last bead:
